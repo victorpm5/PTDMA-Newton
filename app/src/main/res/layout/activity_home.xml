@@ -7,14 +7,56 @@
     android:layout_height="match_parent"
     tools:context=".HomeActivity">
 
-    <TextView
+    <ScrollView
+        android:layout_above="@+id/bottomNavigationBar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/title_home"
-        android:textSize="50sp"
-        android:textStyle="bold"
-        android:layout_centerInParent="true"
-        />
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <include layout="@layout/card_view_test" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/button_graba"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="72dp"
+                android:clickable="true"
+                android:src="@android:drawable/ic_btn_speak_now"
+                app:fabCustomSize="64dp"
+                app:maxImageSize="50dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
