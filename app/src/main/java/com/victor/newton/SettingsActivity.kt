@@ -11,16 +11,20 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
+        initNavigationBar()
+    }
+
+    private fun initNavigationBar() {
         val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottomNavigationBar)
         bottomNavigationView.selectedItemId = R.id.navigation_settings
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
 
-            if(it.itemId == R.id.navigation_home){
+            if (it.itemId == R.id.navigation_home) {
                 val intent = Intent(this, HomeActivity::class.java)
                 this.startActivity(intent)
                 this.finish()
-                overridePendingTransition(0,0)
+                overridePendingTransition(0, 0)
             }
 
             true
