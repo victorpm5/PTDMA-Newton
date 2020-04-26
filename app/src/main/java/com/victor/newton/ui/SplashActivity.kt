@@ -9,6 +9,7 @@ import android.os.Handler
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.victor.newton.HomeActivity
 import com.victor.newton.R
 
 
@@ -67,7 +68,7 @@ class SplashActivity : AppCompatActivity() {
 
         //Esperem uns segons abans d'anar a la main activity
         handler.postDelayed({
-            val intent = Intent(this, MainActivity::class.java)
+            val intent = Intent(this, HomeActivity::class.java)
             this.startActivity(intent)
             this.finish()
         }, 3000)
