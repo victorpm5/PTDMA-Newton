@@ -1,4 +1,4 @@
-package com.victor.newton
+package com.victor.newton.ui
 
 import android.app.Activity
 import android.content.Intent
@@ -9,6 +9,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.victor.newton.R
 import java.util.*
 
 class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
@@ -33,7 +34,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     private fun initNavigationBar() {
         val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottomNavigationBar)
-        bottomNavigationView.selectedItemId = R.id.navigation_home
+        bottomNavigationView.selectedItemId =
+            R.id.navigation_home
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
 

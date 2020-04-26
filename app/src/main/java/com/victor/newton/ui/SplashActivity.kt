@@ -9,7 +9,6 @@ import android.os.Handler
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.victor.newton.HomeActivity
 import com.victor.newton.R
 
 

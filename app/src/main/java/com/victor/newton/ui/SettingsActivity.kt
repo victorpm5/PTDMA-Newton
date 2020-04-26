@@ -1,9 +1,10 @@
-package com.victor.newton
+package com.victor.newton.ui
 
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.victor.newton.R
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -16,7 +17,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun initNavigationBar() {
         val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottomNavigationBar)
-        bottomNavigationView.selectedItemId = R.id.navigation_settings
+        bottomNavigationView.selectedItemId =
+            R.id.navigation_settings
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
 
