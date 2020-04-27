@@ -7,6 +7,10 @@ import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.util.Log
+import android.view.View
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.TextView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.victor.newton.R
@@ -30,6 +34,22 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         buttonGraba.setOnClickListener {
             graba()
         }
+
+        //TEST Declarem múltiples missatges error
+
+        val messageTest: View = findViewById(R.id.message2)
+        val imatge: ImageView = messageTest.findViewById<ImageView>(R.id.icon)
+        val text: TextView = messageTest.findViewById<TextView>(R.id.textMissatge)
+        imatge.setImageResource(R.drawable.ic_done_black_24dp)
+        text.setText("Canvi efectuat")
+        text.textSize
+
+        val messageTest2: View = findViewById(R.id.message3)
+        val imatge2: ImageView = messageTest2.findViewById<ImageView>(R.id.icon)
+        val text2: TextView = messageTest2.findViewById<TextView>(R.id.textMissatge)
+        imatge2.setImageResource(R.drawable.ic_error_black_24dp)
+        text2.setText("Error")
+
     }
 
     private fun initNavigationBar() {

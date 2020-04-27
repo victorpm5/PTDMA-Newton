@@ -17,31 +17,19 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <include layout="@layout/card_view_test" />
+            <include android:id="@+id/message1"
+                layout="@layout/card_view_message" />
 
-            <include layout="@layout/card_view_test" />
+            <include android:id="@+id/message2"
+                layout="@layout/card_view_message" />
 
-            <include layout="@layout/card_view_test" />
+            <include android:id="@+id/message3"
+                layout="@layout/card_view_message" />
 
-            <include layout="@layout/card_view_test" />
+            <include layout="@layout/card_view_weather_one_day" />
+            <include layout="@layout/card_view_weather_three_days" />
+            <include layout="@layout/card_view_weather_three_days" />
 
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
-
-            <include layout="@layout/card_view_test" />
         </LinearLayout>
     </ScrollView>
 
