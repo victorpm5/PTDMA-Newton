@@ -8,6 +8,7 @@ import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
+import android.widget.CalendarView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
@@ -40,15 +41,20 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         val messageTest: View = findViewById(R.id.message2)
         val imatge: ImageView = messageTest.findViewById<ImageView>(R.id.icon)
         val text: TextView = messageTest.findViewById<TextView>(R.id.textMissatge)
-        imatge.setImageResource(R.drawable.ic_done_black_24dp)
-        text.setText("Canvi efectuat")
+        imatge.setImageResource(R.drawable.ok)
+        text.setText("Change completed successfully")
         text.textSize
 
         val messageTest2: View = findViewById(R.id.message3)
         val imatge2: ImageView = messageTest2.findViewById<ImageView>(R.id.icon)
         val text2: TextView = messageTest2.findViewById<TextView>(R.id.textMissatge)
-        imatge2.setImageResource(R.drawable.ic_error_black_24dp)
-        text2.setText("Error")
+        imatge2.setImageResource(R.drawable.error2)
+        text2.setText("Ups, there has been an error updating the field")
+
+        //TEST with calendar
+        val calendar: CalendarView = findViewById(R.id.calendar)
+        calendar.maxDate = calendar.date
+        calendar.minDate = calendar.date
 
     }
 

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+        xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/event_card_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        tools:ignore="MissingConstraints"
+        xmlns:tools="http://schemas.android.com/tools"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        app:cardCornerRadius="20dp">
+
+    <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+<!--        <ImageView-->
+<!--            android:id="@+id/icon"-->
+<!--            android:layout_width="70dp"-->
+<!--            android:layout_height="70dp"-->
+<!--            android:layout_marginEnd="8dp"-->
+<!--            android:contentDescription="icon"-->
+<!--            android:src="@drawable/calendar"-->
+<!--            app:layout_constraintStart_toStartOf="parent"-->
+<!--            app:layout_constraintTop_toTopOf="parent" />-->
+
+<!--        <TextView-->
+<!--            android:id="@+id/textMissatge"-->
+<!--            android:layout_toEndOf="@id/icon"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="60dp"-->
+<!--            android:autoSizeMaxTextSize="40sp"-->
+<!--            android:autoSizeMinTextSize="5sp"-->
+<!--            android:autoSizeTextType="uniform"-->
+<!--            android:gravity="center_vertical"-->
+<!--            android:text="Events"-->
+<!--            android:textColor="@android:color/black"-->
+<!--            android:textStyle="bold"-->
+<!--            app:layout_constraintBottom_toBottomOf="parent"-->
+<!--            app:layout_constraintStart_toEndOf="@id/icon"-->
+<!--            app:layout_constraintTop_toTopOf="parent" />-->
+
+        <CalendarView
+            android:id="@+id/calendar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/icon"
+            android:firstDayOfWeek="0"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/calendar"
+            android:orientation="vertical"
+            android:paddingBottom="10dp">
+
+            <include layout="@layout/content_activity_day" />
+            <include layout="@layout/content_activity_day" />
+            <include layout="@layout/content_activity_day" />
+            <include layout="@layout/content_activity_day" />
+
+        </LinearLayout>
+    </RelativeLayout>
+</androidx.cardview.widget.CardView>

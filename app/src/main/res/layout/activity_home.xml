@@ -5,7 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.HomeActivity">
+    tools:context=".ui.HomeActivity"
+    android:background="@color/colorbgCards">
 
     <ScrollView
         android:layout_above="@+id/bottomNavigationBar"
@@ -15,7 +16,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="100dp">
 
             <include android:id="@+id/message1"
                 layout="@layout/card_view_message" />
@@ -28,8 +30,7 @@
 
             <include layout="@layout/card_view_weather_one_day" />
             <include layout="@layout/card_view_weather_three_days" />
-            <include layout="@layout/card_view_weather_three_days" />
-
+            <include layout="@layout/card_view_event" />
         </LinearLayout>
     </ScrollView>
 
@@ -38,22 +39,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/bottomNavigationBar"
+        android:layout_centerHorizontal="true"
         android:layout_marginBottom="10dp"
         android:clickable="true"
-        android:src="@android:drawable/ic_btn_speak_now"
-        android:layout_centerHorizontal="true"
+        android:src="@drawable/ic_mic_black_24dp"
+        app:backgroundTint="@color/colorbg"
         app:fabCustomSize="64dp"
         app:maxImageSize="50dp" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigationBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/bottomNavigationBar"
+        android:layout_alignParentBottom="true"
         android:background="@color/colorPrimary"
-        app:itemTextColor="@drawable/selector"
         app:itemIconTint="@drawable/selector"
-        app:menu="@menu/bottom_nav_menu"
-        android:layout_alignParentBottom="true"/>
+        app:itemTextColor="@drawable/selector"
+        app:menu="@menu/bottom_nav_menu" />
 
 
 </RelativeLayout>
