@@ -15,7 +15,9 @@ import com.victor.newton.R
 class SplashActivity : AppCompatActivity() {
 
     //Declarem Array de permisos
-    private var permisos = arrayOf(Manifest.permission.RECORD_AUDIO)
+    private var permisos = arrayOf(Manifest.permission.RECORD_AUDIO,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    Manifest.permission.ACCESS_FINE_LOCATION)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
