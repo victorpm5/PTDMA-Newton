@@ -1,26 +1,39 @@
 package com.victor.newton.ui
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.location.Address
+import android.location.Geocoder
+import android.location.Geocoder.isPresent
+import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
+import android.os.Looper
+import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
 import android.widget.CalendarView
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.victor.newton.R
 import java.util.*
+import com.google.android.gms.location.*
+
 
 class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     private var SPEECH_REQUEST_CODE: Int = 14
     private var tts: TextToSpeech? = null
+    //Location
+    lateinit var mFusedLocationClient: FusedLocationProviderClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +68,11 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         val calendar: CalendarView = findViewById(R.id.calendar)
         calendar.maxDate = calendar.date
         calendar.minDate = calendar.date
+
+
+        //TEST LOCATION
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        getLastLocation()
 
     }
 
@@ -120,4 +138,89 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         }
         super.onDestroy()
     }
+
+    //------------------------------------------------- Location -------------------------------------------------------------
+
+    private fun isLocationEnabled(): Boolean {
+        val locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+            LocationManager.NETWORK_PROVIDER
+        )
+    }
+
+    private fun getCityByLatLong(latitude: Double, Longitude: Double): String{
+        val geocoder = Geocoder(this, Locale.getDefault())
+
+        var cityName = ""
+        var countryCode = ""
+
+        if(isPresent()) {
+            val addresses: List<Address> = geocoder.getFromLocation(latitude, Longitude, 1)
+            cityName = addresses[0].locality
+            countryCode = addresses[0].countryCode
+        }
+
+        return "$cityName, $countryCode"
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getLastLocation() {
+//        if (checkPermissions()) {
+        if (isLocationEnabled()) {
+
+            mFusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
+                var location: Location? = task.result
+                if (location == null) {
+                    requestNewLocationData()
+                } else {
+                    actualitzaVistaLocation( location.latitude, location.longitude)
+                }
+            }
+        } else {
+            Toast.makeText(this, "Turn on location", Toast.LENGTH_LONG).show()
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            startActivity(intent)
+        }
+//        } else {
+//            requestPermissions()
+//        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestNewLocationData() {
+        val mLocationRequest = LocationRequest()
+        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        mLocationRequest.interval = 0
+        mLocationRequest.fastestInterval = 0
+        mLocationRequest.numUpdates = 1
+
+        //Check new location every 5-10 seconds
+//        mLocationRequest.interval = 10000
+//        mLocationRequest.fastestInterval = 5000
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        mFusedLocationClient.requestLocationUpdates(
+            mLocationRequest, mLocationCallback,
+            Looper.myLooper()
+        )
+    }
+
+    private val mLocationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            val mLastLocation: Location = locationResult.lastLocation
+            actualitzaVistaLocation(mLastLocation.latitude,mLastLocation.longitude)
+        }
+    }
+
+
+    private fun actualitzaVistaLocation(latitude: Double, longitude: Double){
+        val messageTest: View = findViewById(R.id.message1)
+        val text: TextView = messageTest.findViewById<TextView>(R.id.textMissatge)
+
+        val location = "${getCityByLatLong(latitude, longitude)}${System.getProperty ("line.separator")}($latitude,$longitude)"
+        text.text = location
+
+    }
+
+
 }
