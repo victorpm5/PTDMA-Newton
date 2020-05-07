@@ -74,6 +74,9 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         getLastLocation()
 
+        //TEST Preferences
+        savePreference("city","Barcelona")
+        text2.setText(getPreference("city"))
     }
 
     private fun initNavigationBar() {
@@ -220,6 +223,20 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         val location = "${getCityByLatLong(latitude, longitude)}${System.getProperty ("line.separator")}($latitude,$longitude)"
         text.text = location
 
+    }
+
+    //---------------------------------------------------------------------------------------------
+
+    private fun getPreference(key: String) : String?{
+        val sharedPreference =  getSharedPreferences("NEWTON_PREFERENCES",Context.MODE_PRIVATE)
+        return sharedPreference.getString(key,"")
+    }
+
+    private fun savePreference(key: String, value :String){
+        val sharedPreference =  getSharedPreferences("NEWTON_PREFERENCES",Context.MODE_PRIVATE)
+        val editor = sharedPreference.edit()
+        editor.putString(key,value)
+        editor.apply()
     }
 
 
