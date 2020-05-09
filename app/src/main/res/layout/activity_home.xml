@@ -28,7 +28,8 @@
             <include android:id="@+id/message3"
                 layout="@layout/card_view_message" />
 
-            <include layout="@layout/card_view_weather_one_day" />
+            <include android:id="@+id/weather"
+                layout="@layout/card_view_weather_one_day" />
             <include layout="@layout/card_view_weather_three_days" />
             <include layout="@layout/card_view_event" />
         </LinearLayout>

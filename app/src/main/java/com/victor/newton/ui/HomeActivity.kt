@@ -26,6 +26,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.victor.newton.R
 import java.util.*
 import com.google.android.gms.location.*
+import com.victor.newton.services.WeatherService
 
 
 class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
@@ -222,6 +223,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
         val location = "${getCityByLatLong(latitude, longitude)}${System.getProperty ("line.separator")}($latitude,$longitude)"
         text.text = location
+
+        WeatherService().getCurrentWeatherByLocation(latitude,longitude, findViewById(R.id.weather))
 
     }
 

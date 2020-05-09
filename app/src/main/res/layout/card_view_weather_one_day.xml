@@ -60,13 +60,13 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
-            android:id="@+id/rainImage"
+            android:id="@+id/humidityImage"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginTop="145dp"
             android:layout_marginEnd="4dp"
-            android:src="@drawable/open_umbrella"
-            app:layout_constraintEnd_toStartOf="@+id/rain"
+            android:src="@drawable/humidity"
+            app:layout_constraintEnd_toStartOf="@+id/humidity"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
@@ -106,7 +106,7 @@
             app:layout_constraintTop_toBottomOf="@+id/textView" />
 
         <TextView
-            android:id="@+id/rain"
+            android:id="@+id/humidity"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="150dp"

@@ -17,7 +17,8 @@ class SplashActivity : AppCompatActivity() {
     //Declarem Array de permisos
     private var permisos = arrayOf(Manifest.permission.RECORD_AUDIO,
                                     Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    Manifest.permission.ACCESS_FINE_LOCATION)
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.INTERNET)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
