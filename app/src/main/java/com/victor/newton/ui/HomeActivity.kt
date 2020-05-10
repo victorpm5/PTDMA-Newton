@@ -26,7 +26,13 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.victor.newton.R
 import java.util.*
 import com.google.android.gms.location.*
-import com.victor.newton.services.WeatherService
+import com.victor.newton.BuildConfig
+import com.victor.newton.helpers.WeatherIconsHelper
+import okhttp3.*
+import org.json.JSONObject
+import java.io.IOException
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 
 class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
@@ -35,6 +41,10 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     //Location
     lateinit var mFusedLocationClient: FusedLocationProviderClient
+    //Weather
+    private val apiKey: String = BuildConfig.WeatherApiKey
+    private val weatherURL: String = "https://api.openweathermap.org/data/2.5/weather"
+    private val forecastURL: String = "https://api.openweathermap.org/data/2.5/forecast"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,20 +60,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             graba()
         }
 
-        //TEST Declarem múltiples missatges error
-
-        val messageTest: View = findViewById(R.id.message2)
-        val imatge: ImageView = messageTest.findViewById<ImageView>(R.id.icon)
-        val text: TextView = messageTest.findViewById<TextView>(R.id.textMissatge)
-        imatge.setImageResource(R.drawable.ok)
-        text.setText("Change completed successfully")
-        text.textSize
-
-        val messageTest2: View = findViewById(R.id.message3)
-        val imatge2: ImageView = messageTest2.findViewById<ImageView>(R.id.icon)
-        val text2: TextView = messageTest2.findViewById<TextView>(R.id.textMissatge)
-        imatge2.setImageResource(R.drawable.error2)
-        text2.setText("Ups, there has been an error updating the field")
 
         //TEST with calendar
         val calendar: CalendarView = findViewById(R.id.calendar)
@@ -73,11 +69,9 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
         //TEST LOCATION
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        getLastLocation()
+//        getLastLocation()
 
-        //TEST Preferences
-        savePreference("city","Barcelona")
-        text2.setText(getPreference("city"))
+
     }
 
     private fun initNavigationBar() {
@@ -110,7 +104,10 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         if (requestCode == SPEECH_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             val results: List<String> = data!!.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
             val spokenText = results[0]
-            reprodueixSo("You've said: " + spokenText)
+
+            procesa(spokenText)
+
+//            reprodueixSo("You've said: " + spokenText)
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -218,21 +215,26 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
 
     private fun actualitzaVistaLocation(latitude: Double, longitude: Double){
-        val messageTest: View = findViewById(R.id.message1)
-        val text: TextView = messageTest.findViewById<TextView>(R.id.textMissatge)
+        val locationView: View = findViewById(R.id.currentLocation)
+        val text: TextView = locationView.findViewById(R.id.textMissatge)
 
-        val location = "${getCityByLatLong(latitude, longitude)}${System.getProperty ("line.separator")}($latitude,$longitude)"
+        val city = getCityByLatLong(latitude, longitude)
+
+        val location = "$city${System.getProperty ("line.separator")}($latitude,$longitude)"
         text.text = location
 
-        WeatherService().getCurrentWeatherByLocation(latitude,longitude, findViewById(R.id.weather))
+        //TODO canviar
+        val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
+        imatgeLocation.setImageResource(R.drawable.location)
+        reprodueixSo("You are currently in $city")
 
     }
 
-    //---------------------------------------------------------------------------------------------
+    //-----------------------------------------PREFERENCES----------------------------------------------------
 
     private fun getPreference(key: String) : String?{
         val sharedPreference =  getSharedPreferences("NEWTON_PREFERENCES",Context.MODE_PRIVATE)
-        return sharedPreference.getString(key,"")
+        return sharedPreference.getString(key,"no value")
     }
 
     private fun savePreference(key: String, value :String){
@@ -240,6 +242,272 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         val editor = sharedPreference.edit()
         editor.putString(key,value)
         editor.apply()
+    }
+
+    //------------------------------------------WEATHER----------------------------------------------------------
+
+    fun getCurrentWeatherByLocation(latitude: Double?, longitude: Double?, city: String) {
+
+        val url: HttpUrl = if(city == "") {
+            HttpUrl.parse(weatherURL)!!.newBuilder()
+                .addQueryParameter("lat", latitude.toString())
+                .addQueryParameter("lon", longitude.toString())
+                .addQueryParameter("APPID", apiKey)
+                .addQueryParameter("units", "metric")
+                .build()
+        }else {
+            HttpUrl.parse(weatherURL)!!.newBuilder()
+                .addQueryParameter("q", city)
+                .addQueryParameter("APPID", apiKey)
+                .addQueryParameter("units", "metric")
+                .build()
+        }
+
+        val request = Request.Builder().url(url).build()
+
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonData = response.body()?.string()
+                val jsonObject = JSONObject(jsonData)
+
+                runOnUiThread {
+                    val view: View = findViewById(R.id.weather)
+
+                    val location: TextView = view.findViewById(R.id.location)
+                    val data: TextView = view.findViewById(R.id.date)
+                    val temperatura: TextView = view.findViewById(R.id.temperature)
+                    val minTemp: TextView = view.findViewById(R.id.tempMin)
+                    val maxTemp: TextView = view.findViewById(R.id.maxTemp)
+                    val description: TextView = view.findViewById(R.id.description)
+                    val humidity: TextView = view.findViewById(R.id.humidity)
+                    val weatherImage: ImageView = view.findViewById(R.id.weatherImage)
+
+                    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
+
+                    data.text = LocalDate.now().format(dateFormatter)
+                    location.text = jsonObject.getString("name")
+                    temperatura.text = "${jsonObject.getJSONObject("main").getInt("temp")}ºC"
+                    minTemp.text = "${jsonObject.getJSONObject("main").getInt("temp_min")}ºC"
+                    maxTemp.text = "${jsonObject.getJSONObject("main").getInt("temp_max")}ºC"
+                    description.text =
+                        jsonObject.getJSONArray("weather").getJSONObject(0).getString("description")
+                    humidity.text = "${jsonObject.getJSONObject("main").getInt("humidity")}% Hum."
+                    weatherImage.setImageResource(WeatherIconsHelper().getImageByIconID(
+                        jsonObject.getJSONArray("weather").getJSONObject(0).getString("icon")))
+                }
+            }
+        })
+    }
+
+    fun getForecastWeatherByLocation(latitude: Double?, longitude: Double?, city:String) {
+
+        val url: HttpUrl = if(city == "") {
+            HttpUrl.parse(forecastURL)!!.newBuilder()
+                .addQueryParameter("lat", latitude.toString())
+                .addQueryParameter("lon", longitude.toString())
+                .addQueryParameter("APPID", apiKey)
+                .addQueryParameter("units", "metric")
+                .build()
+        }else {
+            HttpUrl.parse(forecastURL)!!.newBuilder()
+                .addQueryParameter("q", city)
+                .addQueryParameter("APPID", apiKey)
+                .addQueryParameter("units", "metric")
+                .build()
+        }
+
+        val request = Request.Builder().url(url).build()
+
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonData = response.body()?.string()
+                val jsonObject = JSONObject(jsonData)
+
+                runOnUiThread {
+                    val view: View = findViewById(R.id.weatherForecast)
+
+                    val location: TextView = view.findViewById(R.id.location)
+                    val data: TextView = view.findViewById(R.id.date)
+                    val data2: TextView = view.findViewById(R.id.date2)
+                    val data3: TextView = view.findViewById(R.id.date3)
+                    val weatherImage: ImageView = view.findViewById(R.id.weatherImage)
+                    val weatherImage2: ImageView = view.findViewById(R.id.weatherImage2)
+                    val weatherImage3: ImageView = view.findViewById(R.id.weatherImage3)
+                    val temperature: TextView = view.findViewById(R.id.temperature)
+                    val temperature2: TextView = view.findViewById(R.id.temperature2)
+                    val temperature3: TextView = view.findViewById(R.id.temperature3)
+
+                    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
+                    data.text = LocalDate.now().format(dateFormatter)
+                    data2.text =  LocalDate.now().plusDays(1).format(dateFormatter)
+                    data3.text =  LocalDate.now().plusDays(2).format(dateFormatter)
+
+                    location.text =
+                        "${jsonObject.getJSONObject("city").getString("name")}, " +
+                                "${jsonObject.getJSONObject("city").getString("country")}"
+
+                    weatherImage.setImageResource(WeatherIconsHelper().getImageByIconID(
+                        jsonObject.getJSONArray("list").getJSONObject(0).getJSONArray("weather").getJSONObject(0).getString("icon")))
+                    weatherImage2.setImageResource(WeatherIconsHelper().getImageByIconID(
+                        jsonObject.getJSONArray("list").getJSONObject(1).getJSONArray("weather").getJSONObject(0).getString("icon")))
+                    weatherImage3.setImageResource(WeatherIconsHelper().getImageByIconID(
+                        jsonObject.getJSONArray("list").getJSONObject(2).getJSONArray("weather").getJSONObject(0).getString("icon")))
+
+                    temperature.text =
+                        "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_min")}ºC/" +
+                                "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_max")}ºC"
+                    temperature2.text =
+                        "${jsonObject.getJSONArray("list").getJSONObject(1).getJSONObject("main").getInt("temp_min")}ºC/" +
+                                "${jsonObject.getJSONArray("list").getJSONObject(1).getJSONObject("main").getInt("temp_max")}ºC"
+                    temperature3.text =
+                        "${jsonObject.getJSONArray("list").getJSONObject(2).getJSONObject("main").getInt("temp_min")}ºC/" +
+                                "${jsonObject.getJSONArray("list").getJSONObject(2).getJSONObject("main").getInt("temp_max")}ºC"
+                }
+            }
+        })
+    }
+
+    //---------------------------------------------------------TMP PROCESSA -----------------------------------------------------------------
+
+    fun procesa (text: String){
+
+        val lowerText = text.toLowerCase(Locale.ROOT)
+
+        //What is my location? Where am I?
+        if((lowerText.startsWith("what") && lowerText.contains("my location"))
+            || lowerText.startsWith("where am i")){
+            getLastLocation()
+            viewMessage("Query successful: current location",true)
+        }
+        //What is my default location? What is the default location?
+        else if((lowerText.startsWith("what") && lowerText.contains("default location"))){
+
+            val city = getPreference("city")
+            city?.let { viewDefaultLocation(it) }
+
+            reprodueixSo("Your default location is $city")
+            viewMessage("Query successful: default location",true)
+        }
+        //Set default location to...
+        else if(lowerText.startsWith("set default location to")){
+
+            val ciutat = lowerText.split("location to")[1].trim()
+
+            //TODO workflow si valor ciutat = "my location", "my current location"...
+            savePreference("city", ciutat)
+
+            viewMessage("Change completed successfully",true)
+
+            val city = getPreference("city")
+            city?.let { viewDefaultLocation(it) }
+
+            reprodueixSo("Change completed successfully, Your default location now is $ciutat")
+
+        }
+        //What are my events? What are my events for today? what events do I have? What are my events for tomorrow?
+        else if((lowerText.startsWith("what") && lowerText.contains("event"))){
+
+            if(lowerText.contains("events for")){
+                val day = lowerText.split("events for")[1].trim()
+
+                //TODO get events
+
+                reprodueixSo("Your events for $day are: meeting at 5, meeting at 6 and meeting at 7")
+                viewMessage("Events for $day obtained successfully",true)
+            }else{
+                reprodueixSo("Your events for today are: meeting at 5, meeting at 6 and meeting at 7")
+                viewMessage("Events for today obtained successfully",true)
+            }
+
+
+        }
+        //Create new event, create event, ...
+        else if((lowerText.startsWith("create") && lowerText.contains("event"))) {
+            viewMessage("Event created successfully",true)
+            reprodueixSo("Event created successfully")
+        }
+        //what is the weather? what's the weather?
+        else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
+
+            getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
+
+            viewMessage("Query successful: weather",true)
+            reprodueixSo("Query successful")
+        }
+        //What is the weather in...?
+        else if((lowerText.startsWith("what is the weather in") || lowerText.startsWith("what's the weather in"))) {
+
+            val city = lowerText.split("weather in")[1].trim()
+
+            //TODO workflow si valor ciutat = "my location", "my current location"...
+            getCurrentWeatherByLocation(null,null, city)
+
+            viewMessage("Query successful: weather in $city",true)
+            reprodueixSo("Query successful")
+        }
+        //what will be the weather tomorrow?what is the weather for tomorrow?
+        else if(lowerText == "what will be the weather tomorrow"
+            || lowerText == "what is the weather for tomorrow" || lowerText == "what's the weather for tomorrow") {
+
+            //TODO check weather for tomorrow
+            getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
+
+            viewMessage("Query successful: weather for tomorrow",true)
+            reprodueixSo("Query successful")
+
+        }
+        //What is the weather forecast?
+        else if(lowerText == "what is the weather forecast" || lowerText == "what's the weather forecast") {
+
+            getPreference("city")?.let { getForecastWeatherByLocation(null,null, it) }
+
+            viewMessage("Query successful: weather forecast",true)
+            reprodueixSo("Query successful")
+
+        }
+        //What is the weather forecast in...?
+        else if((lowerText.startsWith("what is the weather forecast in") || lowerText.startsWith("what's the weather forecast in"))) {
+
+            val city = lowerText.split("forecast in")[1].trim()
+            getForecastWeatherByLocation(null,null, city)
+
+            viewMessage("Query successful: weather forecast in $city",true)
+            reprodueixSo("Query successful")
+
+        }
+        //Other type of message...
+        else{
+            viewMessage("Sorry, I didn't understand what you said ", false)
+            reprodueixSo("Sorry, I didn't understand what you said")
+        }
+
+    }
+
+    fun viewMessage(textOk :String, ok: Boolean){
+        val messageTest: View = findViewById(R.id.message2)
+        val imatge: ImageView = messageTest.findViewById(R.id.icon)
+        val text: TextView = messageTest.findViewById(R.id.textMissatge)
+
+        text.text = textOk
+
+        if(ok) imatge.setImageResource(R.drawable.ok)
+        else imatge.setImageResource(R.drawable.error2)
+    }
+
+    fun viewDefaultLocation(city: String){
+        val defaultLocationView: View = findViewById(R.id.defaultLocation)
+        val locationText: TextView = defaultLocationView.findViewById(R.id.textMissatge)
+        val imatge: ImageView = defaultLocationView.findViewById(R.id.icon)
+        imatge.setImageResource(R.drawable.location)
+        locationText.text = city
     }
 
 

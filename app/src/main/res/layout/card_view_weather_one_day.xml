@@ -19,7 +19,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
             android:layout_marginTop="8dp"
-            android:text="Barcelona, ES"
+            android:text="Barcelona"
             android:textSize="25sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginEnd="10dp"
-            android:text="Today"
+            android:text="10/05"
             android:textSize="20sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -39,12 +39,9 @@
             android:id="@+id/description"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginStart="30dp"
             android:text="Partly Cloudy"
             android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/weatherImage" />
 
@@ -61,8 +58,8 @@
 
         <ImageView
             android:id="@+id/humidityImage"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:layout_marginTop="145dp"
             android:layout_marginEnd="4dp"
             android:src="@drawable/humidity"
@@ -73,8 +70,7 @@
             android:id="@+id/temperature"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:layout_marginTop="80dp"
+            android:layout_marginTop="75dp"
             android:gravity="center"
             android:text="22°C"
             android:textSize="45sp"
@@ -88,7 +84,7 @@
             android:layout_marginTop="5dp"
             android:layout_marginEnd="20dp"
             android:gravity="center_horizontal|bottom"
-            android:text="24°C"
+            android:text="23°C"
             android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/textView" />
@@ -100,7 +96,7 @@
             android:layout_marginTop="5dp"
             android:layout_marginEnd="10dp"
             android:gravity="center_horizontal"
-            android:text="15°C"
+            android:text="20°C"
             android:textSize="16sp"
             app:layout_constraintEnd_toStartOf="@+id/maxTemp"
             app:layout_constraintTop_toBottomOf="@+id/textView" />
@@ -111,9 +107,11 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="150dp"
             android:layout_marginEnd="11dp"
+            android:layout_marginBottom="12dp"
             android:gravity="center_horizontal"
             android:text="20% rain"
             android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
