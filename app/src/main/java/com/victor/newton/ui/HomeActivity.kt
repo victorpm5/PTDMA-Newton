@@ -1,5 +1,7 @@
 package com.victor.newton.ui
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -10,12 +12,14 @@ import android.location.Geocoder.isPresent
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
+import android.view.animation.Animation
 import android.widget.CalendarView
 import android.widget.ImageView
 import android.widget.TextView
@@ -60,16 +64,19 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             graba()
         }
 
-
         //TEST with calendar
         val calendar: CalendarView = findViewById(R.id.calendar)
         calendar.maxDate = calendar.date
         calendar.minDate = calendar.date
 
-
         //TEST LOCATION
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-//        getLastLocation()
+
+        //Visualitzacio
+        amagaVistes()
+
+        //generem vista inicial
+        mostraInfoInicial()
 
 
     }
@@ -94,6 +101,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     //------------------------------------------- Voice Recognition methods --------------------------------------------
     private fun graba(){
+        amagaVistes()
+
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "en")
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -227,6 +236,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
         imatgeLocation.setImageResource(R.drawable.location)
         reprodueixSo("You are currently in $city")
+        showView(locationView)
 
     }
 
@@ -298,6 +308,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                     humidity.text = "${jsonObject.getJSONObject("main").getInt("humidity")}% Hum."
                     weatherImage.setImageResource(WeatherIconsHelper().getImageByIconID(
                         jsonObject.getJSONArray("weather").getJSONObject(0).getString("icon")))
+
+                    showView(view)
                 }
             }
         })
@@ -370,6 +382,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                     temperature3.text =
                         "${jsonObject.getJSONArray("list").getJSONObject(2).getJSONObject("main").getInt("temp_min")}ºC/" +
                                 "${jsonObject.getJSONArray("list").getJSONObject(2).getJSONObject("main").getInt("temp_max")}ºC"
+
+                    showView(view)
                 }
             }
         })
@@ -427,12 +441,17 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                 viewMessage("Events for today obtained successfully",true)
             }
 
+            val calendar: View = findViewById(R.id.events)
+            showView(calendar)
 
         }
         //Create new event, create event, ...
         else if((lowerText.startsWith("create") && lowerText.contains("event"))) {
             viewMessage("Event created successfully",true)
             reprodueixSo("Event created successfully")
+
+            val calendar: View = findViewById(R.id.events)
+            showView(calendar)
         }
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
@@ -483,6 +502,14 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             reprodueixSo("Query successful")
 
         }
+        //Show My information
+        else if(lowerText == "show my information"){
+
+            mostraInfoInicial()
+
+            viewMessage("Query successful: show my information",true)
+            reprodueixSo("Query successful")
+        }
         //Other type of message...
         else{
             viewMessage("Sorry, I didn't understand what you said ", false)
@@ -500,15 +527,73 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
         if(ok) imatge.setImageResource(R.drawable.ok)
         else imatge.setImageResource(R.drawable.error2)
+
+        showView(messageTest)
+        hideView(messageTest)
     }
 
     fun viewDefaultLocation(city: String){
         val defaultLocationView: View = findViewById(R.id.defaultLocation)
         val locationText: TextView = defaultLocationView.findViewById(R.id.textMissatge)
         val imatge: ImageView = defaultLocationView.findViewById(R.id.icon)
+
         imatge.setImageResource(R.drawable.location)
         locationText.text = city
+
+        showView(defaultLocationView)
     }
 
+    fun showView(view: View){
+        view.visibility = View.VISIBLE
+        view.alpha = 0.0f;
+
+        //Mostrem la vista
+        view.animate()
+            .alpha(1.0f)
+            .setDuration(500)
+            .setListener(null);
+    }
+
+    fun hideView(view: View){
+        val handler = Handler()
+        handler.postDelayed({
+            view.animate()
+                .alpha(0.0f)
+                .setDuration(1000)
+                .setListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        view.visibility = View.GONE
+                    }
+                })
+        }, 5000)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------
+
+    fun amagaVistes(){
+        val messageTest: View = findViewById(R.id.message2)
+        val defaultLocationView: View = findViewById(R.id.defaultLocation)
+        val locationView: View = findViewById(R.id.currentLocation)
+        val weatherView: View = findViewById(R.id.weather)
+        val weatherForecastView: View = findViewById(R.id.weatherForecast)
+        val eventsView: View = findViewById(R.id.events)
+
+        messageTest.visibility = View.GONE
+        defaultLocationView.visibility = View.GONE
+        locationView.visibility = View.GONE
+        weatherView.visibility = View.GONE
+        weatherForecastView.visibility = View.GONE
+        eventsView.visibility = View.GONE
+    }
+
+    fun mostraInfoInicial(){
+        val city = getPreference("city")
+        city?.let { viewDefaultLocation(it) }
+        city?.let { getCurrentWeatherByLocation(null,null, it) }
+
+        val events: View = findViewById(R.id.events)
+        showView(events)
+    }
 
 }

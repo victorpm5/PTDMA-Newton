@@ -34,7 +34,8 @@
             <include android:id="@+id/weatherForecast"
                 layout="@layout/card_view_weather_three_days" />
 
-            <include layout="@layout/card_view_event" />
+            <include android:id="@+id/events"
+                layout="@layout/card_view_event" />
 
         </LinearLayout>
     </ScrollView>
