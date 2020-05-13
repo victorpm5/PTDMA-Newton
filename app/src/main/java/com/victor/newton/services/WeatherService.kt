@@ -27,26 +27,14 @@ class WeatherService(private val context: Context) {
 
     fun getCurrentWeatherByLocation(latitude: Double?, longitude: Double?, city: String, view: View) {
 
-        val url: HttpUrl = if(city == "") {
-            HttpUrl.parse(weatherURL)!!.newBuilder()
-                .addQueryParameter("lat", latitude.toString())
-                .addQueryParameter("lon", longitude.toString())
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }else {
-            HttpUrl.parse(weatherURL)!!.newBuilder()
-                .addQueryParameter("q", city)
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }
+        val url = generaUrl(weatherURL,latitude,longitude,city,"metric")
 
         val request = Request.Builder().url(url).build()
 
         OkHttpClient().newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 e.printStackTrace()
+                //TODO mostra missatge error al usuari
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -60,26 +48,14 @@ class WeatherService(private val context: Context) {
 
     fun getForecastWeatherByLocation(latitude: Double?, longitude: Double?, city:String, view: View) {
 
-        val url: HttpUrl = if(city == "") {
-            HttpUrl.parse(forecastURL)!!.newBuilder()
-                .addQueryParameter("lat", latitude.toString())
-                .addQueryParameter("lon", longitude.toString())
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }else {
-            HttpUrl.parse(forecastURL)!!.newBuilder()
-                .addQueryParameter("q", city)
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }
+        val url = generaUrl(forecastURL,latitude,longitude,city,"metric")
 
         val request = Request.Builder().url(url).build()
 
         OkHttpClient().newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 e.printStackTrace()
+                //TODO mostra missatge error al usuari
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -89,6 +65,22 @@ class WeatherService(private val context: Context) {
                 actualitzaVistaForecast(view, jsonObject)
             }
         })
+    }
+
+    private fun generaUrl(base: String,latitude: Double?, longitude: Double?, city:String, units:String ) :HttpUrl{
+
+        val url = HttpUrl.parse(base)!!.newBuilder()
+            .addQueryParameter("APPID", apiKey)
+            .addQueryParameter("units", units)
+
+        if(city.trim() != ""){
+            url.addQueryParameter("q", city)
+        }else {
+            url.addQueryParameter("lat", latitude.toString())
+                .addQueryParameter("lon", longitude.toString())
+        }
+
+        return url.build()
     }
 
 
@@ -172,13 +164,5 @@ class WeatherService(private val context: Context) {
         }
 
     }
-
-
-
-
-
-
-
-
 
 }
