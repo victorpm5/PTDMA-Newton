@@ -32,6 +32,7 @@ import java.util.*
 import com.google.android.gms.location.*
 import com.victor.newton.BuildConfig
 import com.victor.newton.helpers.WeatherIconsHelper
+import com.victor.newton.services.PreferencesService
 import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
@@ -57,6 +58,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         //Declarem barra de navegació
         initNavigationBar()
 
+        //Iniciem botó grabació
         val buttonGraba: FloatingActionButton = findViewById(R.id.button_graba)
         tts = TextToSpeech(this, this)
 
@@ -64,27 +66,17 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             graba()
         }
 
-        //TEST with calendar
-        val calendar: CalendarView = findViewById(R.id.calendar)
-        calendar.maxDate = calendar.date
-        calendar.minDate = calendar.date
-
-        //TEST LOCATION
+        //Iniciem localització
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        //Visualitzacio
+        //Visualitzacio Inicial
         amagaVistes()
-
-        //generem vista inicial
         mostraInfoInicial()
-
-
     }
 
     private fun initNavigationBar() {
         val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottomNavigationBar)
-        bottomNavigationView.selectedItemId =
-            R.id.navigation_home
+        bottomNavigationView.selectedItemId = R.id.navigation_home
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
 
@@ -101,8 +93,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     //------------------------------------------- Voice Recognition methods --------------------------------------------
     private fun graba(){
-        amagaVistes()
-
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "en")
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -114,9 +104,10 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val results: List<String> = data!!.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
             val spokenText = results[0]
 
-            procesa(spokenText)
-
-//            reprodueixSo("You've said: " + spokenText)
+            if(spokenText.trim() != ""){
+                amagaVistes()
+                procesa(spokenText)
+            }
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -125,7 +116,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            // set US English as language for tts
+            //Indiquem English,US com a llengua
             val result = tts!!.setLanguage(Locale.US)
 
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
@@ -179,7 +170,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         if (isLocationEnabled()) {
 
             mFusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
-                var location: Location? = task.result
+                val location: Location? = task.result
                 if (location == null) {
                     requestNewLocationData()
                 } else {
@@ -234,25 +225,12 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
         //TODO canviar
         val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
-        imatgeLocation.setImageResource(R.drawable.location)
+        imatgeLocation.setImageResource(R.drawable.my_location)
         reprodueixSo("You are currently in $city")
         showView(locationView)
 
     }
 
-    //-----------------------------------------PREFERENCES----------------------------------------------------
-
-    private fun getPreference(key: String) : String?{
-        val sharedPreference =  getSharedPreferences("NEWTON_PREFERENCES",Context.MODE_PRIVATE)
-        return sharedPreference.getString(key,"no value")
-    }
-
-    private fun savePreference(key: String, value :String){
-        val sharedPreference =  getSharedPreferences("NEWTON_PREFERENCES",Context.MODE_PRIVATE)
-        val editor = sharedPreference.edit()
-        editor.putString(key,value)
-        editor.apply()
-    }
 
     //------------------------------------------WEATHER----------------------------------------------------------
 
@@ -404,7 +382,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         //What is my default location? What is the default location?
         else if((lowerText.startsWith("what") && lowerText.contains("default location"))){
 
-            val city = getPreference("city")
+            val city = PreferencesService(this).getPreference("city")
             city?.let { viewDefaultLocation(it) }
 
             reprodueixSo("Your default location is $city")
@@ -416,13 +394,12 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val ciutat = lowerText.split("location to")[1].trim()
 
             //TODO workflow si valor ciutat = "my location", "my current location"...
-            savePreference("city", ciutat)
+            PreferencesService(this).savePreference("city", ciutat)
 
-            viewMessage("Change completed successfully",true)
-
-            val city = getPreference("city")
+            val city = PreferencesService(this).getPreference("city")
             city?.let { viewDefaultLocation(it) }
 
+            viewMessage("Change completed successfully",true)
             reprodueixSo("Change completed successfully, Your default location now is $ciutat")
 
         }
@@ -456,10 +433,11 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
 
-            getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
+            PreferencesService(this).getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
 
             viewMessage("Query successful: weather",true)
-            reprodueixSo("Query successful")
+            //TODO: Canviar TTS i dir el temps en la localització
+            reprodueixSo("Showing you the weather for your default location")
         }
         //What is the weather in...?
         else if((lowerText.startsWith("what is the weather in") || lowerText.startsWith("what's the weather in"))) {
@@ -470,26 +448,28 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             getCurrentWeatherByLocation(null,null, city)
 
             viewMessage("Query successful: weather in $city",true)
-            reprodueixSo("Query successful")
+            //TODO: Canviar TTS i dir el temps en la localització
+            reprodueixSo("Showing you the weather in $city")
         }
         //what will be the weather tomorrow?what is the weather for tomorrow?
         else if(lowerText == "what will be the weather tomorrow"
             || lowerText == "what is the weather for tomorrow" || lowerText == "what's the weather for tomorrow") {
 
             //TODO check weather for tomorrow
-            getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
+            PreferencesService(this).getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
 
             viewMessage("Query successful: weather for tomorrow",true)
-            reprodueixSo("Query successful")
-
+            //TODO: Canviar TTS i dir el temps en la localització
+            reprodueixSo("Showing you the weather for tomorrow in your default location")
         }
         //What is the weather forecast?
         else if(lowerText == "what is the weather forecast" || lowerText == "what's the weather forecast") {
 
-            getPreference("city")?.let { getForecastWeatherByLocation(null,null, it) }
+            PreferencesService(this).getPreference("city")?.let { getForecastWeatherByLocation(null,null, it) }
 
             viewMessage("Query successful: weather forecast",true)
-            reprodueixSo("Query successful")
+            //TODO: Canviar TTS i dir el temps en la localització
+            reprodueixSo("Showing you the weather forecast for your default location")
 
         }
         //What is the weather forecast in...?
@@ -499,7 +479,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             getForecastWeatherByLocation(null,null, city)
 
             viewMessage("Query successful: weather forecast in $city",true)
-            reprodueixSo("Query successful")
+            //TODO: Canviar TTS i dir el temps en la localització
+            reprodueixSo("Showing you the weather forecast in $city")
 
         }
         //Show My information
@@ -508,7 +489,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             mostraInfoInicial()
 
             viewMessage("Query successful: show my information",true)
-            reprodueixSo("Query successful")
+            reprodueixSo("Showing your basic information")
         }
         //Other type of message...
         else{
@@ -538,7 +519,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         val imatge: ImageView = defaultLocationView.findViewById(R.id.icon)
 
         imatge.setImageResource(R.drawable.location)
-        locationText.text = city
+        locationText.text = "${city.capitalize()}${System.getProperty ("line.separator")}(Default location)"
 
         showView(defaultLocationView)
     }
@@ -588,9 +569,13 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     }
 
     fun mostraInfoInicial(){
-        val city = getPreference("city")
+        val city = PreferencesService(this).getPreference("city")
         city?.let { viewDefaultLocation(it) }
         city?.let { getCurrentWeatherByLocation(null,null, it) }
+
+        val calendar: CalendarView = findViewById(R.id.calendar)
+        calendar.maxDate = calendar.date
+        calendar.minDate = calendar.date
 
         val events: View = findViewById(R.id.events)
         showView(events)

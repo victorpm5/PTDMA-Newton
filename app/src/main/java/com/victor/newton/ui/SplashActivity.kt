@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.victor.newton.R
+import com.victor.newton.services.PreferencesService
 
 
 class SplashActivity : AppCompatActivity() {
@@ -66,8 +67,9 @@ class SplashActivity : AppCompatActivity() {
 
     private fun goToMainActivity(){
 
-        val handler = Handler()
+        comprovaExisteixCiutat()
 
+        val handler = Handler()
         //Esperem uns segons abans d'anar a la main activity
         handler.postDelayed({
             val intent = Intent(this, HomeActivity::class.java)
@@ -75,5 +77,18 @@ class SplashActivity : AppCompatActivity() {
             this.finish()
         }, 3000)
     }
+
+    private fun comprovaExisteixCiutat(){
+        
+        val city = PreferencesService(this).getPreference("city")
+
+        //TODO canviar i ficar localització actual del dispositiu
+        //Si no hi ha cap defaultLocation posem Barcelona per defecte
+        if(city == null){
+            PreferencesService(this).savePreference("city", "Barcelona")
+        }
+
+    }
+
 
 }
