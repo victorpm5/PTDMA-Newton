@@ -1,43 +1,39 @@
 package com.victor.newton.ui
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.location.Address
-import android.location.Geocoder
-import android.location.Geocoder.isPresent
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
-import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
-import android.view.animation.Animation
 import android.widget.CalendarView
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.gms.location.*
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.victor.newton.R
-import java.util.*
-import com.google.android.gms.location.*
 import com.victor.newton.BuildConfig
+import com.victor.newton.R
+import com.victor.newton.helpers.LocationHelper
+import com.victor.newton.helpers.ViewsHelper
 import com.victor.newton.helpers.WeatherIconsHelper
 import com.victor.newton.services.PreferencesService
+import com.victor.newton.services.WeatherService
 import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.*
 
 
 class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
@@ -46,10 +42,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     //Location
     lateinit var mFusedLocationClient: FusedLocationProviderClient
-    //Weather
-    private val apiKey: String = BuildConfig.WeatherApiKey
-    private val weatherURL: String = "https://api.openweathermap.org/data/2.5/weather"
-    private val forecastURL: String = "https://api.openweathermap.org/data/2.5/forecast"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -149,21 +141,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         )
     }
 
-    private fun getCityByLatLong(latitude: Double, Longitude: Double): String{
-        val geocoder = Geocoder(this, Locale.getDefault())
-
-        var cityName = ""
-        var countryCode = ""
-
-        if(isPresent()) {
-            val addresses: List<Address> = geocoder.getFromLocation(latitude, Longitude, 1)
-            cityName = addresses[0].locality
-            countryCode = addresses[0].countryCode
-        }
-
-        return "$cityName, $countryCode"
-    }
-
     @SuppressLint("MissingPermission")
     private fun getLastLocation() {
 //        if (checkPermissions()) {
@@ -217,157 +194,20 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     private fun actualitzaVistaLocation(latitude: Double, longitude: Double){
         val locationView: View = findViewById(R.id.currentLocation)
         val text: TextView = locationView.findViewById(R.id.textMissatge)
+        val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
 
-        val city = getCityByLatLong(latitude, longitude)
+        val city = LocationHelper(this).getCityByLatLong(latitude, longitude)
 
         val location = "$city${System.getProperty ("line.separator")}($latitude,$longitude)"
         text.text = location
-
-        //TODO canviar
-        val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
         imatgeLocation.setImageResource(R.drawable.my_location)
+
         reprodueixSo("You are currently in $city")
-        showView(locationView)
-
+        ViewsHelper(this).showView(locationView)
     }
 
 
-    //------------------------------------------WEATHER----------------------------------------------------------
-
-    fun getCurrentWeatherByLocation(latitude: Double?, longitude: Double?, city: String) {
-
-        val url: HttpUrl = if(city == "") {
-            HttpUrl.parse(weatherURL)!!.newBuilder()
-                .addQueryParameter("lat", latitude.toString())
-                .addQueryParameter("lon", longitude.toString())
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }else {
-            HttpUrl.parse(weatherURL)!!.newBuilder()
-                .addQueryParameter("q", city)
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }
-
-        val request = Request.Builder().url(url).build()
-
-        OkHttpClient().newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                val jsonData = response.body()?.string()
-                val jsonObject = JSONObject(jsonData)
-
-                runOnUiThread {
-                    val view: View = findViewById(R.id.weather)
-
-                    val location: TextView = view.findViewById(R.id.location)
-                    val data: TextView = view.findViewById(R.id.date)
-                    val temperatura: TextView = view.findViewById(R.id.temperature)
-                    val minTemp: TextView = view.findViewById(R.id.tempMin)
-                    val maxTemp: TextView = view.findViewById(R.id.maxTemp)
-                    val description: TextView = view.findViewById(R.id.description)
-                    val humidity: TextView = view.findViewById(R.id.humidity)
-                    val weatherImage: ImageView = view.findViewById(R.id.weatherImage)
-
-                    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
-
-                    data.text = LocalDate.now().format(dateFormatter)
-                    location.text = jsonObject.getString("name")
-                    temperatura.text = "${jsonObject.getJSONObject("main").getInt("temp")}ºC"
-                    minTemp.text = "${jsonObject.getJSONObject("main").getInt("temp_min")}ºC"
-                    maxTemp.text = "${jsonObject.getJSONObject("main").getInt("temp_max")}ºC"
-                    description.text =
-                        jsonObject.getJSONArray("weather").getJSONObject(0).getString("description")
-                    humidity.text = "${jsonObject.getJSONObject("main").getInt("humidity")}% Hum."
-                    weatherImage.setImageResource(WeatherIconsHelper().getImageByIconID(
-                        jsonObject.getJSONArray("weather").getJSONObject(0).getString("icon")))
-
-                    showView(view)
-                }
-            }
-        })
-    }
-
-    fun getForecastWeatherByLocation(latitude: Double?, longitude: Double?, city:String) {
-
-        val url: HttpUrl = if(city == "") {
-            HttpUrl.parse(forecastURL)!!.newBuilder()
-                .addQueryParameter("lat", latitude.toString())
-                .addQueryParameter("lon", longitude.toString())
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }else {
-            HttpUrl.parse(forecastURL)!!.newBuilder()
-                .addQueryParameter("q", city)
-                .addQueryParameter("APPID", apiKey)
-                .addQueryParameter("units", "metric")
-                .build()
-        }
-
-        val request = Request.Builder().url(url).build()
-
-        OkHttpClient().newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                val jsonData = response.body()?.string()
-                val jsonObject = JSONObject(jsonData)
-
-                runOnUiThread {
-                    val view: View = findViewById(R.id.weatherForecast)
-
-                    val location: TextView = view.findViewById(R.id.location)
-                    val data: TextView = view.findViewById(R.id.date)
-                    val data2: TextView = view.findViewById(R.id.date2)
-                    val data3: TextView = view.findViewById(R.id.date3)
-                    val weatherImage: ImageView = view.findViewById(R.id.weatherImage)
-                    val weatherImage2: ImageView = view.findViewById(R.id.weatherImage2)
-                    val weatherImage3: ImageView = view.findViewById(R.id.weatherImage3)
-                    val temperature: TextView = view.findViewById(R.id.temperature)
-                    val temperature2: TextView = view.findViewById(R.id.temperature2)
-                    val temperature3: TextView = view.findViewById(R.id.temperature3)
-
-                    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
-                    data.text = LocalDate.now().format(dateFormatter)
-                    data2.text =  LocalDate.now().plusDays(1).format(dateFormatter)
-                    data3.text =  LocalDate.now().plusDays(2).format(dateFormatter)
-
-                    location.text =
-                        "${jsonObject.getJSONObject("city").getString("name")}, " +
-                                "${jsonObject.getJSONObject("city").getString("country")}"
-
-                    weatherImage.setImageResource(WeatherIconsHelper().getImageByIconID(
-                        jsonObject.getJSONArray("list").getJSONObject(0).getJSONArray("weather").getJSONObject(0).getString("icon")))
-                    weatherImage2.setImageResource(WeatherIconsHelper().getImageByIconID(
-                        jsonObject.getJSONArray("list").getJSONObject(1).getJSONArray("weather").getJSONObject(0).getString("icon")))
-                    weatherImage3.setImageResource(WeatherIconsHelper().getImageByIconID(
-                        jsonObject.getJSONArray("list").getJSONObject(2).getJSONArray("weather").getJSONObject(0).getString("icon")))
-
-                    temperature.text =
-                        "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_min")}ºC/" +
-                                "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_max")}ºC"
-                    temperature2.text =
-                        "${jsonObject.getJSONArray("list").getJSONObject(1).getJSONObject("main").getInt("temp_min")}ºC/" +
-                                "${jsonObject.getJSONArray("list").getJSONObject(1).getJSONObject("main").getInt("temp_max")}ºC"
-                    temperature3.text =
-                        "${jsonObject.getJSONArray("list").getJSONObject(2).getJSONObject("main").getInt("temp_min")}ºC/" +
-                                "${jsonObject.getJSONArray("list").getJSONObject(2).getJSONObject("main").getInt("temp_max")}ºC"
-
-                    showView(view)
-                }
-            }
-        })
-    }
-
-    //---------------------------------------------------------TMP PROCESSA -----------------------------------------------------------------
+    //--------------------------------------------------------- PROCESSA -----------------------------------------------------------------
 
     fun procesa (text: String){
 
@@ -419,7 +259,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             }
 
             val calendar: View = findViewById(R.id.events)
-            showView(calendar)
+            ViewsHelper(this).showView(calendar)
 
         }
         //Create new event, create event, ...
@@ -428,12 +268,12 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             reprodueixSo("Event created successfully")
 
             val calendar: View = findViewById(R.id.events)
-            showView(calendar)
+            ViewsHelper(this).showView(calendar)
         }
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
 
-            PreferencesService(this).getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
+            PreferencesService(this).getPreference("city")?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather)) }
 
             viewMessage("Query successful: weather",true)
             //TODO: Canviar TTS i dir el temps en la localització
@@ -445,7 +285,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val city = lowerText.split("weather in")[1].trim()
 
             //TODO workflow si valor ciutat = "my location", "my current location"...
-            getCurrentWeatherByLocation(null,null, city)
+            WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather))
 
             viewMessage("Query successful: weather in $city",true)
             //TODO: Canviar TTS i dir el temps en la localització
@@ -456,7 +296,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             || lowerText == "what is the weather for tomorrow" || lowerText == "what's the weather for tomorrow") {
 
             //TODO check weather for tomorrow
-            PreferencesService(this).getPreference("city")?.let { getCurrentWeatherByLocation(null,null, it) }
+            PreferencesService(this).getPreference("city")?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather)) }
 
             viewMessage("Query successful: weather for tomorrow",true)
             //TODO: Canviar TTS i dir el temps en la localització
@@ -465,7 +305,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         //What is the weather forecast?
         else if(lowerText == "what is the weather forecast" || lowerText == "what's the weather forecast") {
 
-            PreferencesService(this).getPreference("city")?.let { getForecastWeatherByLocation(null,null, it) }
+            PreferencesService(this).getPreference("city")?.let { WeatherService(this).getForecastWeatherByLocation(null,null, it,findViewById(R.id.weatherForecast)) }
 
             viewMessage("Query successful: weather forecast",true)
             //TODO: Canviar TTS i dir el temps en la localització
@@ -476,7 +316,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         else if((lowerText.startsWith("what is the weather forecast in") || lowerText.startsWith("what's the weather forecast in"))) {
 
             val city = lowerText.split("forecast in")[1].trim()
-            getForecastWeatherByLocation(null,null, city)
+            WeatherService(this).getForecastWeatherByLocation(null,null, city,findViewById(R.id.weatherForecast))
 
             viewMessage("Query successful: weather forecast in $city",true)
             //TODO: Canviar TTS i dir el temps en la localització
@@ -499,58 +339,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     }
 
-    fun viewMessage(textOk :String, ok: Boolean){
-        val messageTest: View = findViewById(R.id.message2)
-        val imatge: ImageView = messageTest.findViewById(R.id.icon)
-        val text: TextView = messageTest.findViewById(R.id.textMissatge)
 
-        text.text = textOk
-
-        if(ok) imatge.setImageResource(R.drawable.ok)
-        else imatge.setImageResource(R.drawable.error2)
-
-        showView(messageTest)
-        hideView(messageTest)
-    }
-
-    fun viewDefaultLocation(city: String){
-        val defaultLocationView: View = findViewById(R.id.defaultLocation)
-        val locationText: TextView = defaultLocationView.findViewById(R.id.textMissatge)
-        val imatge: ImageView = defaultLocationView.findViewById(R.id.icon)
-
-        imatge.setImageResource(R.drawable.location)
-        locationText.text = "${city.capitalize()}${System.getProperty ("line.separator")}(Default location)"
-
-        showView(defaultLocationView)
-    }
-
-    fun showView(view: View){
-        view.visibility = View.VISIBLE
-        view.alpha = 0.0f;
-
-        //Mostrem la vista
-        view.animate()
-            .alpha(1.0f)
-            .setDuration(500)
-            .setListener(null);
-    }
-
-    fun hideView(view: View){
-        val handler = Handler()
-        handler.postDelayed({
-            view.animate()
-                .alpha(0.0f)
-                .setDuration(1000)
-                .setListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        view.visibility = View.GONE
-                    }
-                })
-        }, 5000)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------
+    //---------------------------------------VIEWS --------------------------------------------------------------
 
     fun amagaVistes(){
         val messageTest: View = findViewById(R.id.message2)
@@ -571,14 +361,39 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     fun mostraInfoInicial(){
         val city = PreferencesService(this).getPreference("city")
         city?.let { viewDefaultLocation(it) }
-        city?.let { getCurrentWeatherByLocation(null,null, it) }
+        city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather))}
 
         val calendar: CalendarView = findViewById(R.id.calendar)
         calendar.maxDate = calendar.date
         calendar.minDate = calendar.date
 
         val events: View = findViewById(R.id.events)
-        showView(events)
+        ViewsHelper(this).showView(events)
+    }
+
+    fun viewMessage(textOk :String, ok: Boolean){
+        val messageTest: View = findViewById(R.id.message2)
+        val imatge: ImageView = messageTest.findViewById(R.id.icon)
+        val text: TextView = messageTest.findViewById(R.id.textMissatge)
+
+        text.text = textOk
+
+        if(ok) imatge.setImageResource(R.drawable.ok)
+        else imatge.setImageResource(R.drawable.error2)
+
+        ViewsHelper(this).showView(messageTest)
+        ViewsHelper(this).hideView(messageTest)
+    }
+
+    fun viewDefaultLocation(city: String){
+        val defaultLocationView: View = findViewById(R.id.defaultLocation)
+        val locationText: TextView = defaultLocationView.findViewById(R.id.textMissatge)
+        val imatge: ImageView = defaultLocationView.findViewById(R.id.icon)
+
+        imatge.setImageResource(R.drawable.location)
+        locationText.text = "${city.capitalize()}${System.getProperty ("line.separator")}(Default location)"
+
+        ViewsHelper(this).showView(defaultLocationView)
     }
 
 }
