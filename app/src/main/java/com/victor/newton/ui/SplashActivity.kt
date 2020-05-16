@@ -67,7 +67,7 @@ class SplashActivity : AppCompatActivity() {
 
     private fun goToMainActivity(){
 
-        comprovaExisteixCiutat()
+        inicialitzaPreferencesSiEscau()
 
         val handler = Handler()
         //Esperem uns segons abans d'anar a la main activity
@@ -78,14 +78,19 @@ class SplashActivity : AppCompatActivity() {
         }, 3000)
     }
 
-    private fun comprovaExisteixCiutat(){
+    private fun inicialitzaPreferencesSiEscau(){
         
         val city = PreferencesService(this).getPreference("city")
+        val unitats = PreferencesService(this).getPreference("unitats")
 
         //TODO canviar i ficar localització actual del dispositiu
         //Si no hi ha cap defaultLocation posem Barcelona per defecte
         if(city == null){
             PreferencesService(this).savePreference("city", "Barcelona")
+        }
+
+        if(unitats == null){
+            PreferencesService(this).savePreference("unitats", "metric")
         }
 
     }

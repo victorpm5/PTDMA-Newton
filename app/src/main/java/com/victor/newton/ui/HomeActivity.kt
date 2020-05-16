@@ -75,7 +75,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             if (it.itemId == R.id.navigation_settings) {
                 val intent = Intent(this, SettingsActivity::class.java)
                 this.startActivity(intent)
-                this.finish()
                 overridePendingTransition(0, 0)
             }
 
@@ -83,10 +82,24 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         }
     }
 
+    override fun onRestart() {
+        val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottomNavigationBar)
+        bottomNavigationView.selectedItemId = R.id.navigation_home
+
+        super.onRestart()
+    }
+
+    //No tanquem l'aplicació, la mantenim en background
+    override fun onBackPressed() {
+        moveTaskToBack(false)
+    }
+
     //------------------------------------------- Voice Recognition methods --------------------------------------------
     private fun graba(){
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "en")
+//        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "en")
+        //Forcem anglès-US com a idioma de detecció
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         startActivityForResult(intent, SPEECH_REQUEST_CODE)
     }
@@ -183,9 +196,18 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         )
     }
 
+    private fun getContext(): Context {
+        return this
+    }
+
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             val mLastLocation: Location = locationResult.lastLocation
+
+            //Guardem latitude i longitude a preferences
+            PreferencesService(getContext()).savePreference("latitude",mLastLocation.latitude.toString())
+            PreferencesService(getContext()).savePreference("longitude",mLastLocation.longitude.toString())
+
             actualitzaVistaLocation(mLastLocation.latitude,mLastLocation.longitude)
         }
     }
@@ -213,14 +235,16 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
         val lowerText = text.toLowerCase(Locale.ROOT)
 
-        //What is my location? Where am I?
-        if((lowerText.startsWith("what") && lowerText.contains("my location"))
+        //What is my location? what is my current location? Where am I?
+        if(lowerText == "what is my location" || lowerText == "what's my location"
+            || lowerText == "what is my current location" || lowerText == "what's my current location"
             || lowerText.startsWith("where am i")){
             getLastLocation()
             viewMessage("Query successful: current location",true)
         }
         //What is my default location? What is the default location?
-        else if((lowerText.startsWith("what") && lowerText.contains("default location"))){
+        else if(lowerText == "what is my default location" || lowerText == "what's my default location"
+            || lowerText == "what is the default location" || lowerText == "what's the default location"){
 
             val city = PreferencesService(this).getPreference("city")
             city?.let { viewDefaultLocation(it) }
@@ -273,55 +297,69 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
 
-            PreferencesService(this).getPreference("city")?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather)) }
+            PreferencesService(this).getPreference("city")?.let { WeatherService(this)
+                .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
 
             viewMessage("Query successful: weather",true)
-            //TODO: Canviar TTS i dir el temps en la localització
-            reprodueixSo("Showing you the weather for your default location")
         }
         //What is the weather in...?
         else if((lowerText.startsWith("what is the weather in") || lowerText.startsWith("what's the weather in"))) {
 
             val city = lowerText.split("weather in")[1].trim()
 
-            //TODO workflow si valor ciutat = "my location", "my current location"...
-            WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather))
+            if(city == "my default location"){
+                PreferencesService(this).getPreference("city")?.let { WeatherService(this)
+                    .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
+            } else if (city == "my location" || city == "my current location"){
+
+                val lat =  PreferencesService(this).getPreference("latitude")
+                val long =  PreferencesService(this).getPreference("longitude")
+
+                WeatherService(this).getCurrentWeatherByLocation(lat?.toDouble(), long?.toDouble(),"",findViewById(R.id.weather),false)
+
+            }else {
+                WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather), false)
+            }
 
             viewMessage("Query successful: weather in $city",true)
-            //TODO: Canviar TTS i dir el temps en la localització
-            reprodueixSo("Showing you the weather in $city")
         }
         //what will be the weather tomorrow?what is the weather for tomorrow?
         else if(lowerText == "what will be the weather tomorrow"
             || lowerText == "what is the weather for tomorrow" || lowerText == "what's the weather for tomorrow") {
 
-            //TODO check weather for tomorrow
-            PreferencesService(this).getPreference("city")?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather)) }
+            PreferencesService(this).getPreference("city")?.let { WeatherService(this)
+                .getForecastWeatherByLocation(null, null,it,findViewById(R.id.weather),true) }
 
             viewMessage("Query successful: weather for tomorrow",true)
-            //TODO: Canviar TTS i dir el temps en la localització
-            reprodueixSo("Showing you the weather for tomorrow in your default location")
         }
         //What is the weather forecast?
         else if(lowerText == "what is the weather forecast" || lowerText == "what's the weather forecast") {
 
-            PreferencesService(this).getPreference("city")?.let { WeatherService(this).getForecastWeatherByLocation(null,null, it,findViewById(R.id.weatherForecast)) }
+            PreferencesService(this).getPreference("city")?.let { WeatherService(this)
+                .getForecastWeatherByLocation(null,null, it,findViewById(R.id.weatherForecast),false) }
 
             viewMessage("Query successful: weather forecast",true)
-            //TODO: Canviar TTS i dir el temps en la localització
-            reprodueixSo("Showing you the weather forecast for your default location")
-
         }
         //What is the weather forecast in...?
         else if((lowerText.startsWith("what is the weather forecast in") || lowerText.startsWith("what's the weather forecast in"))) {
 
             val city = lowerText.split("forecast in")[1].trim()
-            WeatherService(this).getForecastWeatherByLocation(null,null, city,findViewById(R.id.weatherForecast))
+
+            if(city == "my default location"){
+                PreferencesService(this).getPreference("city")?.let { WeatherService(this)
+                    .getForecastWeatherByLocation(null,null, it,findViewById(R.id.weatherForecast),false) }
+            } else if (city == "my location" || city == "my current location"){
+
+                val lat =  PreferencesService(this).getPreference("latitude")
+                val long =  PreferencesService(this).getPreference("longitude")
+
+                WeatherService(this).getForecastWeatherByLocation(lat?.toDouble(),long?.toDouble(), "",findViewById(R.id.weatherForecast),false)
+
+            }else {
+                WeatherService(this).getForecastWeatherByLocation(null,null, city,findViewById(R.id.weatherForecast),false)
+            }
 
             viewMessage("Query successful: weather forecast in $city",true)
-            //TODO: Canviar TTS i dir el temps en la localització
-            reprodueixSo("Showing you the weather forecast in $city")
-
         }
         //Show My information
         else if(lowerText == "show my information"){
@@ -361,7 +399,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     fun mostraInfoInicial(){
         val city = PreferencesService(this).getPreference("city")
         city?.let { viewDefaultLocation(it) }
-        city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather))}
+        city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),true)}
 
         val calendar: CalendarView = findViewById(R.id.calendar)
         calendar.maxDate = calendar.date

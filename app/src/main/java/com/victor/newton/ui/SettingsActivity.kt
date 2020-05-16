@@ -23,13 +23,16 @@ class SettingsActivity : AppCompatActivity() {
         bottomNavigationView.setOnNavigationItemSelectedListener {
 
             if (it.itemId == R.id.navigation_home) {
-                val intent = Intent(this, HomeActivity::class.java)
-                this.startActivity(intent)
                 this.finish()
                 overridePendingTransition(0, 0)
             }
 
             true
         }
+    }
+
+    override fun onBackPressed() {
+        this.finish()
+        overridePendingTransition(0, 0)
     }
 }
