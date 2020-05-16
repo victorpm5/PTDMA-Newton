@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.victor.newton.R
+import com.victor.newton.services.PreferencesService
 
 
 class SplashActivity : AppCompatActivity() {
@@ -17,7 +18,8 @@ class SplashActivity : AppCompatActivity() {
     //Declarem Array de permisos
     private var permisos = arrayOf(Manifest.permission.RECORD_AUDIO,
                                     Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    Manifest.permission.ACCESS_FINE_LOCATION)
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.INTERNET)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,8 +67,9 @@ class SplashActivity : AppCompatActivity() {
 
     private fun goToMainActivity(){
 
-        val handler = Handler()
+        inicialitzaPreferencesSiEscau()
 
+        val handler = Handler()
         //Esperem uns segons abans d'anar a la main activity
         handler.postDelayed({
             val intent = Intent(this, HomeActivity::class.java)
@@ -74,5 +77,23 @@ class SplashActivity : AppCompatActivity() {
             this.finish()
         }, 3000)
     }
+
+    private fun inicialitzaPreferencesSiEscau(){
+        
+        val city = PreferencesService(this).getPreference("city")
+        val unitats = PreferencesService(this).getPreference("unitats")
+
+        //TODO canviar i ficar localització actual del dispositiu
+        //Si no hi ha cap defaultLocation posem Barcelona per defecte
+        if(city == null){
+            PreferencesService(this).savePreference("city", "Barcelona")
+        }
+
+        if(unitats == null){
+            PreferencesService(this).savePreference("unitats", "metric")
+        }
+
+    }
+
 
 }

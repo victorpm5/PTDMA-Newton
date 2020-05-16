@@ -19,7 +19,7 @@
             android:layout_height="80dp"
             android:layout_marginEnd="8dp"
             android:contentDescription="icon"
-            android:src="@drawable/location"
+            android:src="@mipmap/ic_launcher"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -31,8 +31,7 @@
             android:autoSizeMinTextSize="5sp"
             android:autoSizeTextType="uniform"
             android:gravity="center"
-            android:text="Barcelona, ES"
-            android:textColor="@android:color/black"
+            android:text=""
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/icon"
