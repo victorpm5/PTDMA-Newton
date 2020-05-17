@@ -156,7 +156,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     @SuppressLint("MissingPermission")
     private fun getLastLocation() {
-//        if (checkPermissions()) {
         if (isLocationEnabled()) {
 
             mFusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
@@ -172,9 +171,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
             startActivity(intent)
         }
-//        } else {
-//            requestPermissions()
-//        }
     }
 
     @SuppressLint("MissingPermission")
@@ -196,36 +192,11 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         )
     }
 
-    private fun getContext(): Context {
-        return this
-    }
-
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             val mLastLocation: Location = locationResult.lastLocation
-
-            //Guardem latitude i longitude a preferences
-            PreferencesService(getContext()).savePreference("latitude",mLastLocation.latitude.toString())
-            PreferencesService(getContext()).savePreference("longitude",mLastLocation.longitude.toString())
-
             actualitzaVistaLocation(mLastLocation.latitude,mLastLocation.longitude)
         }
-    }
-
-
-    private fun actualitzaVistaLocation(latitude: Double, longitude: Double){
-        val locationView: View = findViewById(R.id.currentLocation)
-        val text: TextView = locationView.findViewById(R.id.textMissatge)
-        val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
-
-        val city = LocationHelper(this).getCityByLatLong(latitude, longitude)
-
-        val location = "$city${System.getProperty ("line.separator")}($latitude,$longitude)"
-        text.text = location
-        imatgeLocation.setImageResource(R.drawable.my_location)
-
-        reprodueixSo("You are currently in $city")
-        ViewsHelper(this).showView(locationView)
     }
 
 
@@ -257,14 +228,20 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
             val ciutat = lowerText.split("location to")[1].trim()
 
-            //TODO workflow si valor ciutat = "my location", "my current location"...
-            PreferencesService(this).savePreference("city", ciutat)
+            if (ciutat == "my location" || ciutat == "my current location") {
+
+                val location = PreferencesService(this).getPreference("localitzacio")
+                location?.let { PreferencesService(this).savePreference("city", location) }
+
+            } else {
+                PreferencesService(this).savePreference("city", ciutat)
+            }
 
             val city = PreferencesService(this).getPreference("city")
             city?.let { viewDefaultLocation(it) }
 
             viewMessage("Change completed successfully",true)
-            reprodueixSo("Change completed successfully, Your default location now is $ciutat")
+            reprodueixSo("Change completed successfully, Your default location now is $city")
 
         }
         //What are my events? What are my events for today? what events do I have? What are my events for tomorrow?
@@ -312,10 +289,12 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                     .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
             } else if (city == "my location" || city == "my current location"){
 
-                val lat =  PreferencesService(this).getPreference("latitude")
-                val long =  PreferencesService(this).getPreference("longitude")
+                val location =  PreferencesService(this).getPreference("localitzacio")
 
-                WeatherService(this).getCurrentWeatherByLocation(lat?.toDouble(), long?.toDouble(),"",findViewById(R.id.weather),false)
+                location?.let {
+                    WeatherService(this).getCurrentWeatherByLocation(null, null,
+                        it,findViewById(R.id.weather),false)
+                }
 
             }else {
                 WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather), false)
@@ -350,10 +329,12 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                     .getForecastWeatherByLocation(null,null, it,findViewById(R.id.weatherForecast),false) }
             } else if (city == "my location" || city == "my current location"){
 
-                val lat =  PreferencesService(this).getPreference("latitude")
-                val long =  PreferencesService(this).getPreference("longitude")
+                val location =  PreferencesService(this).getPreference("localitzacio")
 
-                WeatherService(this).getForecastWeatherByLocation(lat?.toDouble(),long?.toDouble(), "",findViewById(R.id.weatherForecast),false)
+                location?.let {
+                    WeatherService(this).getForecastWeatherByLocation(null, null,
+                        it,findViewById(R.id.weatherForecast),false)
+                }
 
             }else {
                 WeatherService(this).getForecastWeatherByLocation(null,null, city,findViewById(R.id.weatherForecast),false)
@@ -432,6 +413,24 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         locationText.text = "${city.capitalize()}${System.getProperty ("line.separator")}(Default location)"
 
         ViewsHelper(this).showView(defaultLocationView)
+    }
+
+    private fun actualitzaVistaLocation(latitude: Double, longitude: Double){
+        val locationView: View = findViewById(R.id.currentLocation)
+        val text: TextView = locationView.findViewById(R.id.textMissatge)
+        val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
+
+        val city = LocationHelper(this).getCityByLatLong(latitude, longitude)
+
+        //guardem la localitzacióActual
+        PreferencesService(this).savePreference("localitzacio",city.ciutat)
+
+        val location = "${city.ciutat}, ${city.codiPais}${System.getProperty ("line.separator")}($latitude,$longitude)"
+        text.text = location
+        imatgeLocation.setImageResource(R.drawable.my_location)
+
+        reprodueixSo("You are currently in ${city.ciutat}")
+        ViewsHelper(this).showView(locationView)
     }
 
 }
