@@ -8,6 +8,7 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
+import android.provider.CalendarContract
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -21,24 +22,18 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.location.*
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.victor.newton.BuildConfig
 import com.victor.newton.R
 import com.victor.newton.helpers.LocationHelper
 import com.victor.newton.helpers.ViewsHelper
-import com.victor.newton.helpers.WeatherIconsHelper
 import com.victor.newton.services.PreferencesService
 import com.victor.newton.services.WeatherService
-import okhttp3.*
-import org.json.JSONObject
-import java.io.IOException
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.*
 
 
 class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     private var SPEECH_REQUEST_CODE: Int = 14
+    private var CREATE_EVENT_REQUEST_CODE: Int = 5
     private var tts: TextToSpeech? = null
     //Location
     lateinit var mFusedLocationClient: FusedLocationProviderClient
@@ -113,6 +108,10 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                 amagaVistes()
                 procesa(spokenText)
             }
+        } else if (requestCode == CREATE_EVENT_REQUEST_CODE){
+            reprodueixSo("The event has been created succesfully")
+            viewMessage("Event created successfully",true)
+            mostraCalendari()
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -199,6 +198,15 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         }
     }
 
+    //------------------------------------------------CALENDAR----------------------------------------------------------
+
+    fun addEventUsingIntent(){
+        val intent = Intent(Intent.ACTION_INSERT)
+            .setData(CalendarContract.Events.CONTENT_URI)
+        startActivityForResult(intent, CREATE_EVENT_REQUEST_CODE)
+    }
+
+
 
     //--------------------------------------------------------- PROCESSA -----------------------------------------------------------------
 
@@ -265,11 +273,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         }
         //Create new event, create event, ...
         else if((lowerText.startsWith("create") && lowerText.contains("event"))) {
-            viewMessage("Event created successfully",true)
-            reprodueixSo("Event created successfully")
-
-            val calendar: View = findViewById(R.id.events)
-            ViewsHelper(this).showView(calendar)
+              addEventUsingIntent()
         }
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
@@ -432,5 +436,11 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         reprodueixSo("You are currently in ${city.ciutat}")
         ViewsHelper(this).showView(locationView)
     }
+
+    private fun mostraCalendari(){
+        val calendar: View = findViewById(R.id.events)
+        ViewsHelper(this).showView(calendar)
+    }
+
 
 }

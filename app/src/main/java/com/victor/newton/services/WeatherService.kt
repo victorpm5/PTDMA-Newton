@@ -30,7 +30,7 @@ class WeatherService(private val context: Context) {
     fun getCurrentWeatherByLocation(latitude: Double?, longitude: Double?, city: String, view: View, isVistaGlobal: Boolean) {
 
         val url = generaUrl(weatherURL,latitude,longitude,city)
-        
+
         val request = Request.Builder().url(url).build()
 
         OkHttpClient().newCall(request).enqueue(object : Callback {
