@@ -8,6 +8,7 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
+import android.provider.CalendarContract
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -21,24 +22,18 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.location.*
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.victor.newton.BuildConfig
 import com.victor.newton.R
 import com.victor.newton.helpers.LocationHelper
 import com.victor.newton.helpers.ViewsHelper
-import com.victor.newton.helpers.WeatherIconsHelper
 import com.victor.newton.services.PreferencesService
 import com.victor.newton.services.WeatherService
-import okhttp3.*
-import org.json.JSONObject
-import java.io.IOException
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.*
 
 
 class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     private var SPEECH_REQUEST_CODE: Int = 14
+    private var CREATE_EVENT_REQUEST_CODE: Int = 5
     private var tts: TextToSpeech? = null
     //Location
     lateinit var mFusedLocationClient: FusedLocationProviderClient
@@ -113,6 +108,10 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                 amagaVistes()
                 procesa(spokenText)
             }
+        } else if (requestCode == CREATE_EVENT_REQUEST_CODE){
+            reprodueixSo("The event has been created succesfully")
+            viewMessage("Event created successfully",true)
+            mostraCalendari()
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -156,7 +155,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     @SuppressLint("MissingPermission")
     private fun getLastLocation() {
-//        if (checkPermissions()) {
         if (isLocationEnabled()) {
 
             mFusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
@@ -172,9 +170,6 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
             startActivity(intent)
         }
-//        } else {
-//            requestPermissions()
-//        }
     }
 
     @SuppressLint("MissingPermission")
@@ -196,37 +191,21 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         )
     }
 
-    private fun getContext(): Context {
-        return this
-    }
-
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             val mLastLocation: Location = locationResult.lastLocation
-
-            //Guardem latitude i longitude a preferences
-            PreferencesService(getContext()).savePreference("latitude",mLastLocation.latitude.toString())
-            PreferencesService(getContext()).savePreference("longitude",mLastLocation.longitude.toString())
-
             actualitzaVistaLocation(mLastLocation.latitude,mLastLocation.longitude)
         }
     }
 
+    //------------------------------------------------CALENDAR----------------------------------------------------------
 
-    private fun actualitzaVistaLocation(latitude: Double, longitude: Double){
-        val locationView: View = findViewById(R.id.currentLocation)
-        val text: TextView = locationView.findViewById(R.id.textMissatge)
-        val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
-
-        val city = LocationHelper(this).getCityByLatLong(latitude, longitude)
-
-        val location = "$city${System.getProperty ("line.separator")}($latitude,$longitude)"
-        text.text = location
-        imatgeLocation.setImageResource(R.drawable.my_location)
-
-        reprodueixSo("You are currently in $city")
-        ViewsHelper(this).showView(locationView)
+    fun addEventUsingIntent(){
+        val intent = Intent(Intent.ACTION_INSERT)
+            .setData(CalendarContract.Events.CONTENT_URI)
+        startActivityForResult(intent, CREATE_EVENT_REQUEST_CODE)
     }
+
 
 
     //--------------------------------------------------------- PROCESSA -----------------------------------------------------------------
@@ -257,14 +236,20 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
             val ciutat = lowerText.split("location to")[1].trim()
 
-            //TODO workflow si valor ciutat = "my location", "my current location"...
-            PreferencesService(this).savePreference("city", ciutat)
+            if (ciutat == "my location" || ciutat == "my current location") {
+
+                val location = PreferencesService(this).getPreference("localitzacio")
+                location?.let { PreferencesService(this).savePreference("city", location) }
+
+            } else {
+                PreferencesService(this).savePreference("city", ciutat)
+            }
 
             val city = PreferencesService(this).getPreference("city")
             city?.let { viewDefaultLocation(it) }
 
             viewMessage("Change completed successfully",true)
-            reprodueixSo("Change completed successfully, Your default location now is $ciutat")
+            reprodueixSo("Change completed successfully, Your default location now is $city")
 
         }
         //What are my events? What are my events for today? what events do I have? What are my events for tomorrow?
@@ -288,11 +273,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         }
         //Create new event, create event, ...
         else if((lowerText.startsWith("create") && lowerText.contains("event"))) {
-            viewMessage("Event created successfully",true)
-            reprodueixSo("Event created successfully")
-
-            val calendar: View = findViewById(R.id.events)
-            ViewsHelper(this).showView(calendar)
+              addEventUsingIntent()
         }
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
@@ -312,10 +293,12 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                     .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
             } else if (city == "my location" || city == "my current location"){
 
-                val lat =  PreferencesService(this).getPreference("latitude")
-                val long =  PreferencesService(this).getPreference("longitude")
+                val location =  PreferencesService(this).getPreference("localitzacio")
 
-                WeatherService(this).getCurrentWeatherByLocation(lat?.toDouble(), long?.toDouble(),"",findViewById(R.id.weather),false)
+                location?.let {
+                    WeatherService(this).getCurrentWeatherByLocation(null, null,
+                        it,findViewById(R.id.weather),false)
+                }
 
             }else {
                 WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather), false)
@@ -350,10 +333,12 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                     .getForecastWeatherByLocation(null,null, it,findViewById(R.id.weatherForecast),false) }
             } else if (city == "my location" || city == "my current location"){
 
-                val lat =  PreferencesService(this).getPreference("latitude")
-                val long =  PreferencesService(this).getPreference("longitude")
+                val location =  PreferencesService(this).getPreference("localitzacio")
 
-                WeatherService(this).getForecastWeatherByLocation(lat?.toDouble(),long?.toDouble(), "",findViewById(R.id.weatherForecast),false)
+                location?.let {
+                    WeatherService(this).getForecastWeatherByLocation(null, null,
+                        it,findViewById(R.id.weatherForecast),false)
+                }
 
             }else {
                 WeatherService(this).getForecastWeatherByLocation(null,null, city,findViewById(R.id.weatherForecast),false)
@@ -433,5 +418,29 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
         ViewsHelper(this).showView(defaultLocationView)
     }
+
+    private fun actualitzaVistaLocation(latitude: Double, longitude: Double){
+        val locationView: View = findViewById(R.id.currentLocation)
+        val text: TextView = locationView.findViewById(R.id.textMissatge)
+        val imatgeLocation: ImageView = locationView.findViewById(R.id.icon)
+
+        val city = LocationHelper(this).getCityByLatLong(latitude, longitude)
+
+        //guardem la localitzacióActual
+        PreferencesService(this).savePreference("localitzacio",city.ciutat)
+
+        val location = "${city.ciutat}, ${city.codiPais}${System.getProperty ("line.separator")}($latitude,$longitude)"
+        text.text = location
+        imatgeLocation.setImageResource(R.drawable.my_location)
+
+        reprodueixSo("You are currently in ${city.ciutat}")
+        ViewsHelper(this).showView(locationView)
+    }
+
+    private fun mostraCalendari(){
+        val calendar: View = findViewById(R.id.events)
+        ViewsHelper(this).showView(calendar)
+    }
+
 
 }
