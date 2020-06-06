@@ -26,6 +26,8 @@ class SplashActivity : AppCompatActivity() {
     private var permisos = arrayOf(Manifest.permission.RECORD_AUDIO,
                                     Manifest.permission.ACCESS_COARSE_LOCATION,
                                     Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.READ_CALENDAR,
+                                    Manifest.permission.WRITE_CALENDAR,
                                     Manifest.permission.INTERNET)
     //Location
     lateinit var mFusedLocationClient: FusedLocationProviderClient

@@ -23,10 +23,15 @@ import com.google.android.gms.location.*
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.victor.newton.R
+import com.victor.newton.domain.Event
 import com.victor.newton.helpers.LocationHelper
 import com.victor.newton.helpers.ViewsHelper
+import com.victor.newton.services.CalendarService
 import com.victor.newton.services.PreferencesService
 import com.victor.newton.services.WeatherService
+import java.text.SimpleDateFormat
+import java.time.*
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 
@@ -111,7 +116,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         } else if (requestCode == CREATE_EVENT_REQUEST_CODE){
             reprodueixSo("The event has been created succesfully")
             viewMessage("Event created successfully",true)
-            mostraCalendari()
+            mostraCalendari(true, false)
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -203,6 +208,9 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     fun addEventUsingIntent(){
         val intent = Intent(Intent.ACTION_INSERT)
             .setData(CalendarContract.Events.CONTENT_URI)
+
+//            .putExtra("title", "teeeeeeest")
+//            .putExtra(CalendarContract.Events.RRULE, "FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=1")
         startActivityForResult(intent, CREATE_EVENT_REQUEST_CODE)
     }
 
@@ -258,22 +266,20 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             if(lowerText.contains("events for")){
                 val day = lowerText.split("events for")[1].trim()
 
-                //TODO get events
+                if(day == "tomorrow") mostraCalendari(false, true)
+                else mostraCalendari(true, true)
 
-                reprodueixSo("Your events for $day are: meeting at 5, meeting at 6 and meeting at 7")
                 viewMessage("Events for $day obtained successfully",true)
             }else{
-                reprodueixSo("Your events for today are: meeting at 5, meeting at 6 and meeting at 7")
+                mostraCalendari(true, true)
                 viewMessage("Events for today obtained successfully",true)
             }
-
-            val calendar: View = findViewById(R.id.events)
-            ViewsHelper(this).showView(calendar)
-
         }
         //Create new event, create event, ...
         else if((lowerText.startsWith("create") && lowerText.contains("event"))) {
               addEventUsingIntent()
+//            CalendarService(this).createEvent()
+            //TODO
         }
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
@@ -386,12 +392,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         city?.let { viewDefaultLocation(it) }
         city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),true)}
 
-        val calendar: CalendarView = findViewById(R.id.calendar)
-        calendar.maxDate = calendar.date
-        calendar.minDate = calendar.date
-
-        val events: View = findViewById(R.id.events)
-        ViewsHelper(this).showView(events)
+        mostraCalendari(true, false)
     }
 
     fun viewMessage(textOk :String, ok: Boolean){
@@ -437,9 +438,110 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         ViewsHelper(this).showView(locationView)
     }
 
-    private fun mostraCalendari(){
-        val calendar: View = findViewById(R.id.events)
-        ViewsHelper(this).showView(calendar)
+    private fun mostraCalendari(avui: Boolean, speak: Boolean){
+
+        val calendar: CalendarView = findViewById(R.id.calendar)
+        val dateFormatter = DateTimeFormatter.ofPattern("HH:mm")
+        val spokenFormater = DateTimeFormatter.ofPattern("HH mm")
+        var spokenText: String
+
+        if(avui){
+            calendar.date = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.maxDate = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.minDate = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            spokenText = "Your events for today are..."
+        } else {
+            calendar.date = LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.maxDate = LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.minDate = LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            spokenText = "Your events for tomorrow are..."
+        }
+
+        val events: ArrayList<Event> = CalendarService(this).getEvents(avui)
+
+        var esdeveniment = events.getOrNull(0)
+        var missatge: String
+        var eventView: View
+        var textEvent: TextView
+
+        eventView = findViewById(R.id.event1)
+
+        if(esdeveniment != null){
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
+
+        } else{
+            spokenText = "You have no events"
+            missatge = "There are no events for this date"
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+        }
+
+        esdeveniment = events.getOrNull(1)
+        eventView = findViewById(R.id.event2)
+
+        if(esdeveniment != null){
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
+
+        } else{
+            eventView.visibility = View.GONE
+        }
+
+        esdeveniment = events.getOrNull(2)
+        eventView = findViewById(R.id.event3)
+
+        if(esdeveniment != null){
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
+
+        } else{
+            eventView.visibility = View.GONE
+        }
+
+        esdeveniment = events.getOrNull(3)
+        eventView = findViewById(R.id.event4)
+
+        if(esdeveniment != null){
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
+
+        } else{
+            eventView.visibility = View.GONE
+        }
+
+        if(speak) {
+            reprodueixSo(spokenText)
+        }
+
+        val eventsCard: View = findViewById(R.id.events)
+        ViewsHelper(this).showView(eventsCard)
+
     }
 
 

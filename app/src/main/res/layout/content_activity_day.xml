@@ -15,6 +15,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:id="@+id/textEvent"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:autoSizeMaxTextSize="20sp"
