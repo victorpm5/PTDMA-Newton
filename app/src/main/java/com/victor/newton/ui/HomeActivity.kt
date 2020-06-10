@@ -29,7 +29,6 @@ import com.victor.newton.helpers.ViewsHelper
 import com.victor.newton.services.CalendarService
 import com.victor.newton.services.PreferencesService
 import com.victor.newton.services.WeatherService
-import java.text.SimpleDateFormat
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -205,11 +204,10 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     //------------------------------------------------CALENDAR----------------------------------------------------------
 
-    fun addEventUsingIntent(){
+    fun addEventUsingIntent(title: String){
         val intent = Intent(Intent.ACTION_INSERT)
             .setData(CalendarContract.Events.CONTENT_URI)
-
-//            .putExtra("title", "teeeeeeest")
+            .putExtra("title", title)
 //            .putExtra(CalendarContract.Events.RRULE, "FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=1")
         startActivityForResult(intent, CREATE_EVENT_REQUEST_CODE)
     }
@@ -275,17 +273,45 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
                 viewMessage("Events for today obtained successfully",true)
             }
         }
-        //Create new event, create event, ...
-        else if((lowerText.startsWith("create") && lowerText.contains("event"))) {
-              addEventUsingIntent()
-//            CalendarService(this).createEvent()
-            //TODO
+        //Create new event on Google Calendar, create event on Google Calendar, ...
+        //Create new event on Google Calendar with title..., create event on Google Calendar with title..
+        else if(lowerText.startsWith("create new event on google calendar")
+                || lowerText.startsWith("create event on google calendar")) {
+
+            if(lowerText.contains("with title")) {
+                val title = lowerText.split("with title")[1].trim()
+                addEventUsingIntent(title)
+            } else{
+                addEventUsingIntent("")
+            }
         }
+        //Create new event, create event, ...
+        else if(lowerText.startsWith("create new event")
+            || lowerText.startsWith("create event")) {
+            //TODO manage
+//            CalendarService(this).createEvent()
+//            mostraCalendari(false, false)
+        }
+
+        //Add weather to calendar, ...
+        else if (lowerText == "add weather to calendar"){
+            val location =  PreferencesService(this).getPreference("localitzacio")
+
+            location?.let {
+                WeatherService(this).getCurrentWeatherByLocation(null, null,
+                    it,findViewById(R.id.weather),false, calendar = true)
+            }
+
+            viewMessage("Weather added to calendar",true)
+            reprodueixSo("The weather has been added succesfully to the calendar. Please remind that it may take a few minutes to be visible")
+
+        }
+
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
 
             PreferencesService(this).getPreference("city")?.let { WeatherService(this)
-                .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
+                .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false, calendar = false) }
 
             viewMessage("Query successful: weather",true)
         }
@@ -296,18 +322,19 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
             if(city == "my default location"){
                 PreferencesService(this).getPreference("city")?.let { WeatherService(this)
-                    .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
+                    .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false, calendar = false) }
             } else if (city == "my location" || city == "my current location"){
 
                 val location =  PreferencesService(this).getPreference("localitzacio")
 
                 location?.let {
                     WeatherService(this).getCurrentWeatherByLocation(null, null,
-                        it,findViewById(R.id.weather),false)
+                        it,findViewById(R.id.weather),false, calendar = false)
                 }
 
             }else {
-                WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather), false)
+                WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather),
+                    false, calendar = false)
             }
 
             viewMessage("Query successful: weather in $city",true)
@@ -390,7 +417,8 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     fun mostraInfoInicial(){
         val city = PreferencesService(this).getPreference("city")
         city?.let { viewDefaultLocation(it) }
-        city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),true)}
+        city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,
+            findViewById(R.id.weather),true, calendar = false)}
 
         mostraCalendari(true, false)
     }
@@ -467,14 +495,21 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         eventView = findViewById(R.id.event1)
 
         if(esdeveniment != null){
+
             val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
             val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
 
-            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
             textEvent = eventView.findViewById(R.id.textEvent)
             textEvent.text =  missatge
             eventView.visibility = View.VISIBLE
-            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
 
         } else{
             spokenText = "You have no events"
@@ -491,12 +526,17 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
             val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
 
-            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
             textEvent = eventView.findViewById(R.id.textEvent)
             textEvent.text =  missatge
             eventView.visibility = View.VISIBLE
-            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
-
         } else{
             eventView.visibility = View.GONE
         }
@@ -508,11 +548,17 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
             val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
 
-            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
             textEvent = eventView.findViewById(R.id.textEvent)
             textEvent.text =  missatge
             eventView.visibility = View.VISIBLE
-            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
 
         } else{
             eventView.visibility = View.GONE
@@ -525,11 +571,17 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
             val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
 
-            missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.descripcio
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
             textEvent = eventView.findViewById(R.id.textEvent)
             textEvent.text =  missatge
             eventView.visibility = View.VISIBLE
-            spokenText += ", " + esdeveniment.descripcio + " at " + initTime.format(spokenFormater)
 
         } else{
             eventView.visibility = View.GONE

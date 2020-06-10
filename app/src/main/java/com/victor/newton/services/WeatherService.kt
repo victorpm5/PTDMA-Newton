@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import com.victor.newton.BuildConfig
 import com.victor.newton.R
+import com.victor.newton.domain.Event
 import com.victor.newton.domain.ForecastWeather
 import com.victor.newton.domain.OneDayWeather
 import com.victor.newton.helpers.ViewsHelper
@@ -17,6 +18,7 @@ import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 
@@ -27,7 +29,8 @@ class WeatherService(private val context: Context) {
     private val forecastURL: String = "https://api.openweathermap.org/data/2.5/forecast"
 
 
-    fun getCurrentWeatherByLocation(latitude: Double?, longitude: Double?, city: String, view: View, isVistaGlobal: Boolean) {
+    fun getCurrentWeatherByLocation(latitude: Double?, longitude: Double?, city: String,
+                                    view: View, isVistaGlobal: Boolean, calendar: Boolean) {
 
         val url = generaUrl(weatherURL,latitude,longitude,city)
 
@@ -46,7 +49,12 @@ class WeatherService(private val context: Context) {
                     val jsonData = response.body()?.string()
                     val jsonObject = JSONObject(jsonData)
 
-                    actualitzaVistaWeather(view, mapejaOneDayWeather(jsonObject, false), isVistaGlobal)
+                    if(calendar){
+                        addWeatherToCalendar(mapejaOneDayWeather(jsonObject, false))
+                    }else{
+                        actualitzaVistaWeather(view, mapejaOneDayWeather(jsonObject, false), isVistaGlobal)
+                    }
+
                 }else {
                     TextToSpeechService(context, "Sorry, it has not been possible to obtain the weather")
                 }
@@ -107,13 +115,14 @@ class WeatherService(private val context: Context) {
 
         val oneDayWeather = OneDayWeather()
         val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
+        val signe = getSigneUnitats()
 
         if(isObjectForecast){
             oneDayWeather.data = LocalDate.now().plusDays(1).format(dateFormatter)
             oneDayWeather.localitzacio = jsonObject.getJSONObject("city").getString("name")
-            oneDayWeather.temperatura  = "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp")}ºC"
-            oneDayWeather.minTemp = "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_min")}ºC"
-            oneDayWeather.maxTemp = "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_max")}ºC"
+            oneDayWeather.temperatura  = "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp")}º$signe"
+            oneDayWeather.minTemp = "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_min")}º$signe"
+            oneDayWeather.maxTemp = "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_max")}º$signe"
             oneDayWeather.descripcio = jsonObject.getJSONArray("list").getJSONObject(8).getJSONArray("weather").getJSONObject(0).getString("description")
             oneDayWeather.humitat = "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("humidity")}% Hum."
             oneDayWeather.weatherImage =  WeatherIconsHelper().getImageByIconID(
@@ -122,9 +131,9 @@ class WeatherService(private val context: Context) {
         } else {
             oneDayWeather.data = LocalDate.now().format(dateFormatter)
             oneDayWeather.localitzacio = jsonObject.getString("name")
-            oneDayWeather.temperatura  = "${jsonObject.getJSONObject("main").getInt("temp")}ºC"
-            oneDayWeather.minTemp = "${jsonObject.getJSONObject("main").getInt("temp_min")}ºC"
-            oneDayWeather.maxTemp = "${jsonObject.getJSONObject("main").getInt("temp_max")}ºC"
+            oneDayWeather.temperatura  = "${jsonObject.getJSONObject("main").getInt("temp")}º$signe"
+            oneDayWeather.minTemp = "${jsonObject.getJSONObject("main").getInt("temp_min")}º$signe"
+            oneDayWeather.maxTemp = "${jsonObject.getJSONObject("main").getInt("temp_max")}º$signe"
             oneDayWeather.descripcio = jsonObject.getJSONArray("weather").getJSONObject(0).getString("description")
             oneDayWeather.humitat = "${jsonObject.getJSONObject("main").getInt("humidity")}% Hum."
             oneDayWeather.weatherImage =  WeatherIconsHelper().getImageByIconID(jsonObject.getJSONArray("weather").getJSONObject(0).getString("icon"))
@@ -136,6 +145,7 @@ class WeatherService(private val context: Context) {
 
         val forecastWeather = ForecastWeather()
         val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
+        val signe = getSigneUnitats()
 
         forecastWeather.localitzacio = jsonObject.getJSONObject("city").getString("name")
 
@@ -144,14 +154,14 @@ class WeatherService(private val context: Context) {
         forecastWeather.data3 =  LocalDate.now().plusDays(2).format(dateFormatter)
 
         forecastWeather.temperatura1 =
-            "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_min")}ºC/" +
-                    "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_max")}ºC"
+            "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_min")}º$signe/" +
+                    "${jsonObject.getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("temp_max")}º$signe"
         forecastWeather.temperatur2 =
-            "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_min")}ºC/" +
-                    "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_max")}ºC"
+            "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_min")}º$signe/" +
+                    "${jsonObject.getJSONArray("list").getJSONObject(8).getJSONObject("main").getInt("temp_max")}º$signe"
         forecastWeather.temperatura3 =
-            "${jsonObject.getJSONArray("list").getJSONObject(16).getJSONObject("main").getInt("temp_min")}ºC/" +
-                    "${jsonObject.getJSONArray("list").getJSONObject(16).getJSONObject("main").getInt("temp_max")}ºC"
+            "${jsonObject.getJSONArray("list").getJSONObject(16).getJSONObject("main").getInt("temp_min")}º$signe/" +
+                    "${jsonObject.getJSONArray("list").getJSONObject(16).getJSONObject("main").getInt("temp_max")}º$signe"
 
         forecastWeather.weatherImage1 = WeatherIconsHelper().getImageByIconID(
             jsonObject.getJSONArray("list").getJSONObject(0).getJSONArray("weather").getJSONObject(0).getString("icon"))
@@ -254,6 +264,26 @@ class WeatherService(private val context: Context) {
                 "${forecastWeather.descripcio2} for tomorrow and ${forecastWeather.descripcio3} for the day after tomorrow"
 
         return missatge
+    }
+
+    private fun getSigneUnitats() :String{
+        when(PreferencesService(context).getPreference("unitats")){
+            "metric" -> return "C"
+            "imperial" -> return "F"
+            "standard" -> return "K"
+        }
+        return "C"
+    }
+
+    private fun addWeatherToCalendar(oneDayWeather: OneDayWeather){
+        val event = Event()
+        event.allDay = true
+        event.initTime = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        event.endTime = LocalDate.now().plusDays(2).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        event.title = "[Weather] " + oneDayWeather.localitzacio + ": " + oneDayWeather.descripcio
+        event.descripcio = "Temperature: " + oneDayWeather.temperatura + ", Humidity: " + oneDayWeather.humitat
+
+        CalendarService(context).createEvent(event)
     }
 
 }

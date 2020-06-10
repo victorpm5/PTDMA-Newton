@@ -54,7 +54,7 @@ class SettingsActivity : AppCompatActivity() {
 
         var preferenceView: View = findViewById(R.id.DefaultCity1)
         var textTitol: TextView = preferenceView.findViewById(R.id.textTitol)
-        var textContingut: TextView = preferenceView.findViewById(R.id.textValor)
+        val textContingut: TextView = preferenceView.findViewById(R.id.textValor)
         var imatge: ImageView = preferenceView.findViewById(R.id.icon)
 
         textTitol.text = "Primary default city"
@@ -63,41 +63,41 @@ class SettingsActivity : AppCompatActivity() {
         city?.let { textContingut.text = it.capitalize() }
 
         imatge.setOnClickListener {
-            actualitzaDefaultCity("city",city)
+            actualitzaDefaultCity("city",textContingut)
         }
 
         preferenceView  = findViewById(R.id.DefaultCity2)
         textTitol = preferenceView.findViewById(R.id.textTitol)
-        textContingut = preferenceView.findViewById(R.id.textValor)
+        val textContingut1: TextView = preferenceView.findViewById(R.id.textValor)
         imatge = preferenceView.findViewById(R.id.icon)
 
         textTitol.text = "Secondary default city"
 
         val city2 = PreferencesService(this).getPreference("city2")
-        city2?.let { textContingut.text = it.capitalize() }
+        city2?.let { textContingut1.text = it.capitalize() }
 
         imatge.setOnClickListener {
-            actualitzaDefaultCity("city2",city2)
+            actualitzaDefaultCity("city2",textContingut1)
         }
 
         preferenceView  = findViewById(R.id.Units)
         textTitol = preferenceView.findViewById(R.id.textTitol)
-        textContingut = preferenceView.findViewById(R.id.textValor)
+        val textContingut2: TextView = preferenceView.findViewById(R.id.textValor)
         imatge = preferenceView.findViewById(R.id.icon)
 
         textTitol.text = "Units"
 
         val units = PreferencesService(this).getPreference("unitats")
-        units?.let { textContingut.text = it.capitalize() }
+        units?.let { textContingut2.text = it.capitalize() }
 
         imatge.setOnClickListener {
-            actualitzaUnitats(textContingut)
+            actualitzaUnitats(textContingut2)
         }
 
 
     }
 
-    private fun actualitzaDefaultCity(key: String, value: String?){
+    private fun actualitzaDefaultCity(key: String, contingut :TextView){
 
         val builder = AlertDialog.Builder(this)
 
@@ -119,6 +119,8 @@ class SettingsActivity : AppCompatActivity() {
         builder.setPositiveButton("Submit"){dialog,which->
             val preferenceValue = textInputEditText.text
             PreferencesService(this).savePreference(key, preferenceValue.toString())
+
+            contingut.text = preferenceValue.toString()
         }
 
         // alert dialog other buttons
@@ -176,12 +178,7 @@ class SettingsActivity : AppCompatActivity() {
         constraintLayout.id = View.generateViewId()
 
         val textInputLayout = TextInputLayout(context)
-        layoutParams.setMargins(
-            32.toDp(context),
-            8.toDp(context),
-            32.toDp(context),
-            8.toDp(context)
-        )
+        layoutParams.setMargins(30.toDp(context), 10.toDp(context), 30.toDp(context), 10.toDp(context))
         textInputLayout.layoutParams = layoutParams
         textInputLayout.hint = "Input city name"
         textInputLayout.id = View.generateViewId()
