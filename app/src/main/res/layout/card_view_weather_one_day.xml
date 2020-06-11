@@ -73,7 +73,7 @@
             android:layout_marginTop="75dp"
             android:gravity="center"
             android:text="22°C"
-            android:textSize="45sp"
+            android:textSize="40sp"
             app:layout_constraintStart_toEndOf="@+id/weatherImage"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -82,10 +82,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
-            android:layout_marginEnd="20dp"
+            android:layout_marginEnd="10dp"
             android:gravity="center_horizontal|bottom"
             android:text="23°C"
-            android:textSize="16sp"
+            android:textSize="14sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/textView" />
 
@@ -94,10 +94,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
-            android:layout_marginEnd="10dp"
+            android:layout_marginEnd="8dp"
             android:gravity="center_horizontal"
             android:text="20°C"
-            android:textSize="16sp"
+            android:textSize="14sp"
             app:layout_constraintEnd_toStartOf="@+id/maxTemp"
             app:layout_constraintTop_toBottomOf="@+id/textView" />
 
@@ -120,7 +120,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="70dp"
-            android:layout_marginEnd="20dp"
+            android:layout_marginEnd="10dp"
             android:gravity="center_horizontal"
             android:text="min/max"
             android:textSize="20sp"

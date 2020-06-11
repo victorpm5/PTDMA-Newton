@@ -12,21 +12,27 @@ import android.provider.CalendarContract
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
-import android.widget.CalendarView
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.location.*
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.victor.newton.R
+import com.victor.newton.domain.Event
 import com.victor.newton.helpers.LocationHelper
 import com.victor.newton.helpers.ViewsHelper
+import com.victor.newton.services.CalendarService
 import com.victor.newton.services.PreferencesService
 import com.victor.newton.services.WeatherService
+import kotlinx.android.synthetic.main.dialog_event.view.*
+import java.lang.Exception
+import java.time.*
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 
@@ -105,13 +111,17 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val spokenText = results[0]
 
             if(spokenText.trim() != ""){
-                amagaVistes()
+
+                if(spokenText.trim().toLowerCase() != "create event" &&
+                    spokenText.trim().toLowerCase() != "create new event"){
+                    amagaVistes()
+                }
                 procesa(spokenText)
             }
         } else if (requestCode == CREATE_EVENT_REQUEST_CODE){
             reprodueixSo("The event has been created succesfully")
             viewMessage("Event created successfully",true)
-            mostraCalendari()
+            mostraCalendari(true, false)
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -200,9 +210,11 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
     //------------------------------------------------CALENDAR----------------------------------------------------------
 
-    fun addEventUsingIntent(){
+    fun addEventUsingIntent(title: String){
         val intent = Intent(Intent.ACTION_INSERT)
             .setData(CalendarContract.Events.CONTENT_URI)
+            .putExtra("title", title)
+//            .putExtra(CalendarContract.Events.RRULE, "FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=1")
         startActivityForResult(intent, CREATE_EVENT_REQUEST_CODE)
     }
 
@@ -258,28 +270,52 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             if(lowerText.contains("events for")){
                 val day = lowerText.split("events for")[1].trim()
 
-                //TODO get events
+                if(day == "tomorrow") mostraCalendari(false, true)
+                else mostraCalendari(true, true)
 
-                reprodueixSo("Your events for $day are: meeting at 5, meeting at 6 and meeting at 7")
                 viewMessage("Events for $day obtained successfully",true)
             }else{
-                reprodueixSo("Your events for today are: meeting at 5, meeting at 6 and meeting at 7")
+                mostraCalendari(true, true)
                 viewMessage("Events for today obtained successfully",true)
             }
+        }
+        //Create new event on Google Calendar, create event on Google Calendar, ...
+        //Create new event on Google Calendar with title..., create event on Google Calendar with title..
+        else if(lowerText.startsWith("create new event on google calendar")
+                || lowerText.startsWith("create event on google calendar")) {
 
-            val calendar: View = findViewById(R.id.events)
-            ViewsHelper(this).showView(calendar)
-
+            if(lowerText.contains("with title")) {
+                val title = lowerText.split("with title")[1].trim()
+                addEventUsingIntent(title)
+            } else{
+                addEventUsingIntent("")
+            }
         }
         //Create new event, create event, ...
-        else if((lowerText.startsWith("create") && lowerText.contains("event"))) {
-              addEventUsingIntent()
+        else if(lowerText.startsWith("create new event")
+            || lowerText.startsWith("create event")) {
+            mostraDialogEvent()
         }
+
+        //Add weather to calendar, ...
+        else if (lowerText == "add weather to calendar"){
+            val location =  PreferencesService(this).getPreference("localitzacio")
+
+            location?.let {
+                WeatherService(this).getCurrentWeatherByLocation(null, null,
+                    it,findViewById(R.id.weather),false, calendar = true)
+            }
+
+            viewMessage("Weather added to calendar",true)
+            reprodueixSo("The weather has been added succesfully to the calendar. Please remind that it may take a few minutes to be visible")
+            mostraCalendari(true,false)
+        }
+
         //what is the weather? what's the weather?
         else if((lowerText == "what is the weather") || lowerText == "what's the weather") {
 
             PreferencesService(this).getPreference("city")?.let { WeatherService(this)
-                .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
+                .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false, calendar = false) }
 
             viewMessage("Query successful: weather",true)
         }
@@ -290,18 +326,19 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
             if(city == "my default location"){
                 PreferencesService(this).getPreference("city")?.let { WeatherService(this)
-                    .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false) }
+                    .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false, calendar = false) }
             } else if (city == "my location" || city == "my current location"){
 
                 val location =  PreferencesService(this).getPreference("localitzacio")
 
                 location?.let {
                     WeatherService(this).getCurrentWeatherByLocation(null, null,
-                        it,findViewById(R.id.weather),false)
+                        it,findViewById(R.id.weather),false, calendar = false)
                 }
 
             }else {
-                WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather), false)
+                WeatherService(this).getCurrentWeatherByLocation(null, null,city,findViewById(R.id.weather),
+                    false, calendar = false)
             }
 
             viewMessage("Query successful: weather in $city",true)
@@ -384,14 +421,10 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     fun mostraInfoInicial(){
         val city = PreferencesService(this).getPreference("city")
         city?.let { viewDefaultLocation(it) }
-        city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),true)}
+        city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,
+            findViewById(R.id.weather),true, calendar = false)}
 
-        val calendar: CalendarView = findViewById(R.id.calendar)
-        calendar.maxDate = calendar.date
-        calendar.minDate = calendar.date
-
-        val events: View = findViewById(R.id.events)
-        ViewsHelper(this).showView(events)
+        mostraCalendari(true, false)
     }
 
     fun viewMessage(textOk :String, ok: Boolean){
@@ -437,9 +470,272 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         ViewsHelper(this).showView(locationView)
     }
 
-    private fun mostraCalendari(){
-        val calendar: View = findViewById(R.id.events)
-        ViewsHelper(this).showView(calendar)
+    private fun mostraCalendari(avui: Boolean, speak: Boolean){
+
+        val calendar: CalendarView = findViewById(R.id.calendar)
+        val dateFormatter = DateTimeFormatter.ofPattern("HH:mm")
+        val spokenFormater = DateTimeFormatter.ofPattern("HH mm")
+        var spokenText: String
+
+        if(avui){
+            calendar.date = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.maxDate = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.minDate = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            spokenText = "Your events for today are..."
+        } else {
+            calendar.date = LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.maxDate = LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            calendar.minDate = LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            spokenText = "Your events for tomorrow are..."
+        }
+
+        val events: ArrayList<Event> = CalendarService(this).getEvents(avui)
+
+        var esdeveniment = events.getOrNull(0)
+        var missatge: String
+        var eventView: View
+        var textEvent: TextView
+
+        eventView = findViewById(R.id.event1)
+
+        if(esdeveniment != null){
+
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+
+        } else{
+            spokenText = "You have no events"
+            missatge = "There are no events for this date"
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+        }
+
+        esdeveniment = events.getOrNull(1)
+        eventView = findViewById(R.id.event2)
+
+        if(esdeveniment != null){
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+        } else{
+            eventView.visibility = View.GONE
+        }
+
+        esdeveniment = events.getOrNull(2)
+        eventView = findViewById(R.id.event3)
+
+        if(esdeveniment != null){
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+
+        } else{
+            eventView.visibility = View.GONE
+        }
+
+        esdeveniment = events.getOrNull(3)
+        eventView = findViewById(R.id.event4)
+
+        if(esdeveniment != null){
+            val initTime =  Instant.ofEpochMilli(esdeveniment.initTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val endTime =  Instant.ofEpochMilli(esdeveniment.endTime).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+            if(esdeveniment.allDay){
+                missatge = "All day: " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " for all day"
+            } else {
+                missatge = initTime.format(dateFormatter) + " - " + endTime.format(dateFormatter) + ": " + esdeveniment.title
+                spokenText += ", " + esdeveniment.title + " at " + initTime.format(spokenFormater)
+            }
+
+            textEvent = eventView.findViewById(R.id.textEvent)
+            textEvent.text =  missatge
+            eventView.visibility = View.VISIBLE
+
+        } else{
+            eventView.visibility = View.GONE
+        }
+
+        if(speak) {
+            reprodueixSo(spokenText)
+        }
+
+        val eventsCard: View = findViewById(R.id.events)
+        ViewsHelper(this).showView(eventsCard)
+
+    }
+
+    private fun mostraDialogEvent(){
+
+        val builder = AlertDialog.Builder(this)
+
+        val inflater = this.layoutInflater;
+        val dialogView = inflater.inflate(R.layout.dialog_event, null)
+        builder.setView(dialogView)
+
+        val units = arrayOf<CharSequence>("No", "Daily", "Weekly", "Monthly")
+        val spinner: Spinner = dialogView.findViewById(R.id.recurrent)
+
+        val adapter = ArrayAdapter(this,
+            android.R.layout.simple_spinner_item, units)
+        spinner.adapter = adapter
+
+        val titol: EditText = dialogView.findViewById(R.id.titol)
+        val descripcio: EditText = dialogView.findViewById(R.id.descripcio)
+        val dataInici: EditText = dialogView.findViewById(R.id.dataInici)
+        val dataFi: EditText = dialogView.findViewById(R.id.dataFinal)
+        val allDay: Switch = dialogView.findViewById(R.id.switch1)
+
+
+        builder.setPositiveButton("Submit"){dialog,which->
+
+            System.out.println("He fet click en submit")
+            amagaVistes()
+
+            val event = Event()
+            event.title = titol.text.toString()
+            event.descripcio = descripcio.text.toString()
+
+            val initTime = LocalDateTime.parse(dataInici.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                .toInstant(ZoneId.systemDefault().rules.getOffset(Instant.now())).toEpochMilli()
+            var endTime :Long = 0
+
+            event.initTime = initTime
+
+            if(dataFi.text.isNotBlank()){
+                endTime = LocalDateTime.parse(dataFi.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    .toInstant(ZoneId.systemDefault().rules.getOffset(Instant.now())).toEpochMilli()
+
+                event.endTime = endTime
+            } else {
+                event.endTime = initTime + 1800000
+            }
+
+            val esRecurrent = spinner.selectedItem.toString()
+            when(esRecurrent.toLowerCase()){
+
+                "no" -> {
+                    event.recurrent = ""
+                }
+                "daily" -> {
+                    event.recurrent = "FREQ=DAILY"
+                }
+                "weekly" -> {
+                    event.recurrent = "FREQ=WEEKLY"
+                }
+                "monthly" -> {
+                    event.recurrent = "FREQ=MONTHLY"
+                }
+                else ->  {
+                    event.recurrent = ""
+                }
+            }
+
+            if(allDay.isChecked){
+                event.initTime = LocalDateTime.parse(dataInici.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    .plusDays(1).toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                event.endTime = LocalDateTime.parse(dataInici.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    .plusDays(2).toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                event.allDay = true
+            } else {
+                event.allDay = false
+            }
+
+            System.out.println("[Event]: " + event.toString())
+
+            try {
+                CalendarService(this).createEvent(event)
+                viewMessage("Event created successfully",true)
+                reprodueixSo("Event created successfully. Please remind that it may take a few minutes to be visible")
+                mostraCalendari(true,false)
+            }catch(e: Exception){
+                viewMessage("Error creating event",false)
+                reprodueixSo("The event has not been created")
+            }
+        }
+        builder.setNegativeButton("Cancel",null)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+        dataInici.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                try {
+                    LocalDateTime.parse(s, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    dataInici.error = null
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                } catch (e: Exception){
+                    dataInici.error = "The format must be dd/MM/yyyy HH:mm"
+                }
+
+            }
+
+        })
+
+        dataFi.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                try {
+                    if(s!!.isNotBlank()) {
+                        LocalDateTime.parse(s, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    }
+                    dataFi.error = null
+                } catch (e: Exception){
+                    dataFi.error = "The format must be dd/MM/yyyy HH:mm"
+                }
+
+            }
+
+        })
     }
 
 
