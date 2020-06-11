@@ -12,12 +12,12 @@ import android.provider.CalendarContract
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
-import android.widget.CalendarView
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.location.*
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -29,6 +29,8 @@ import com.victor.newton.helpers.ViewsHelper
 import com.victor.newton.services.CalendarService
 import com.victor.newton.services.PreferencesService
 import com.victor.newton.services.WeatherService
+import kotlinx.android.synthetic.main.dialog_event.view.*
+import java.lang.Exception
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -109,7 +111,11 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             val spokenText = results[0]
 
             if(spokenText.trim() != ""){
-                amagaVistes()
+
+                if(spokenText.trim().toLowerCase() != "create event" &&
+                    spokenText.trim().toLowerCase() != "create new event"){
+                    amagaVistes()
+                }
                 procesa(spokenText)
             }
         } else if (requestCode == CREATE_EVENT_REQUEST_CODE){
@@ -288,9 +294,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         //Create new event, create event, ...
         else if(lowerText.startsWith("create new event")
             || lowerText.startsWith("create event")) {
-            //TODO manage
-//            CalendarService(this).createEvent()
-//            mostraCalendari(false, false)
+            mostraDialogEvent()
         }
 
         //Add weather to calendar, ...
@@ -304,7 +308,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
             viewMessage("Weather added to calendar",true)
             reprodueixSo("The weather has been added succesfully to the calendar. Please remind that it may take a few minutes to be visible")
-
+            mostraCalendari(true,false)
         }
 
         //what is the weather? what's the weather?
@@ -594,6 +598,144 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         val eventsCard: View = findViewById(R.id.events)
         ViewsHelper(this).showView(eventsCard)
 
+    }
+
+    private fun mostraDialogEvent(){
+
+        val builder = AlertDialog.Builder(this)
+
+        val inflater = this.layoutInflater;
+        val dialogView = inflater.inflate(R.layout.dialog_event, null)
+        builder.setView(dialogView)
+
+        val units = arrayOf<CharSequence>("No", "Daily", "Weekly", "Monthly")
+        val spinner: Spinner = dialogView.findViewById(R.id.recurrent)
+
+        val adapter = ArrayAdapter(this,
+            android.R.layout.simple_spinner_item, units)
+        spinner.adapter = adapter
+
+        val titol: EditText = dialogView.findViewById(R.id.titol)
+        val descripcio: EditText = dialogView.findViewById(R.id.descripcio)
+        val dataInici: EditText = dialogView.findViewById(R.id.dataInici)
+        val dataFi: EditText = dialogView.findViewById(R.id.dataFinal)
+        val allDay: Switch = dialogView.findViewById(R.id.switch1)
+
+
+        builder.setPositiveButton("Submit"){dialog,which->
+
+            System.out.println("He fet click en submit")
+            amagaVistes()
+
+            val event = Event()
+            event.title = titol.text.toString()
+            event.descripcio = descripcio.text.toString()
+
+            val initTime = LocalDateTime.parse(dataInici.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                .toInstant(ZoneId.systemDefault().rules.getOffset(Instant.now())).toEpochMilli()
+            var endTime :Long = 0
+
+            event.initTime = initTime
+
+            if(dataFi.text.isNotBlank()){
+                endTime = LocalDateTime.parse(dataFi.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    .toInstant(ZoneId.systemDefault().rules.getOffset(Instant.now())).toEpochMilli()
+
+                event.endTime = endTime
+            } else {
+                event.endTime = initTime + 1800000
+            }
+
+            val esRecurrent = spinner.selectedItem.toString()
+            when(esRecurrent.toLowerCase()){
+
+                "no" -> {
+                    event.recurrent = ""
+                }
+                "daily" -> {
+                    event.recurrent = "FREQ=DAILY"
+                }
+                "weekly" -> {
+                    event.recurrent = "FREQ=WEEKLY"
+                }
+                "monthly" -> {
+                    event.recurrent = "FREQ=MONTHLY"
+                }
+                else ->  {
+                    event.recurrent = ""
+                }
+            }
+
+            if(allDay.isChecked){
+                event.initTime = LocalDateTime.parse(dataInici.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    .plusDays(1).toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                event.endTime = LocalDateTime.parse(dataInici.text, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    .plusDays(2).toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                event.allDay = true
+            } else {
+                event.allDay = false
+            }
+
+            System.out.println("[Event]: " + event.toString())
+
+            try {
+                CalendarService(this).createEvent(event)
+                viewMessage("Event created successfully",true)
+                reprodueixSo("Event created successfully. Please remind that it may take a few minutes to be visible")
+                mostraCalendari(true,false)
+            }catch(e: Exception){
+                viewMessage("Error creating event",false)
+                reprodueixSo("The event has not been created")
+            }
+        }
+        builder.setNegativeButton("Cancel",null)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+        dataInici.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                try {
+                    LocalDateTime.parse(s, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    dataInici.error = null
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                } catch (e: Exception){
+                    dataInici.error = "The format must be dd/MM/yyyy HH:mm"
+                }
+
+            }
+
+        })
+
+        dataFi.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                try {
+                    if(s!!.isNotBlank()) {
+                        LocalDateTime.parse(s, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    }
+                    dataFi.error = null
+                } catch (e: Exception){
+                    dataFi.error = "The format must be dd/MM/yyyy HH:mm"
+                }
+
+            }
+
+        })
     }
 
 

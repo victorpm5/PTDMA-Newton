@@ -7,4 +7,9 @@ class Event() {
     var descripcio: String = ""
     var allDay: Boolean = false
     var recurrent: String = ""
+
+    override fun toString(): String {
+        return "Event(initTime=$initTime, endTime=$endTime, title='$title', descripcio='$descripcio', allDay=$allDay, recurrent='$recurrent')"
+    }
 }
+

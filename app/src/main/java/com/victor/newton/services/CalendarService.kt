@@ -70,10 +70,6 @@ class CalendarService(private val context: Context) {
 
         val calendarId = getCalendarId(context)
 
-//        FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=1
-//        FREQ=MONTHLY;BYMONTHDAY=6;INTERVAL=2
-//        RRULE:FREQ=WEEKLY;COUNT=5;BYDAY=TU,FR
-
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
             put(CalendarContract.Events.EVENT_TIMEZONE, ZoneId.systemDefault().id)
@@ -82,8 +78,8 @@ class CalendarService(private val context: Context) {
             put(CalendarContract.Events.DTSTART, event.initTime)
 
             if(event.recurrent.isNotBlank()){
-                put(CalendarContract.Events.DURATION, event.endTime)
                 put(CalendarContract.Events.RRULE, event.recurrent)
+                put(CalendarContract.Events.DTEND, event.endTime)
             } else{
                 put(CalendarContract.Events.DTEND, event.endTime)
             }
