@@ -8,6 +8,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.CalendarContract
+import com.victor.newton.domain.CalendarDTO
 import com.victor.newton.domain.Event
 import java.time.*
 import java.util.*
@@ -47,8 +48,11 @@ class CalendarService(private val context: Context) {
         ContentUris.appendId(builder, startTimeMilis)
         ContentUris.appendId(builder, endTimeMilis)
 
+        val calendarDTO = getCalendarId(context)
+        val mail = arrayOf(calendarDTO!!.calAccount)
+
         val cursor: Cursor = context.contentResolver.query(builder.build(), EVENT_PROJECTION,
-            null,null, CalendarContract.Instances.BEGIN
+            CalendarContract.Calendars.ACCOUNT_NAME+" = ?",mail, CalendarContract.Instances.BEGIN
         )!!
 
         while (cursor.moveToNext()) {
@@ -68,7 +72,7 @@ class CalendarService(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun createEvent(event: Event){
 
-        val calendarId = getCalendarId(context)
+        val calendarId = getCalendarId(context)!!.calId
 
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
@@ -98,7 +102,7 @@ class CalendarService(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    private fun getCalendarId(context: Context) : Long? {
+    private fun getCalendarId(context: Context) : CalendarDTO? {
         val projection = arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
 
         var calCursor = context.contentResolver.query(CalendarContract.Calendars.CONTENT_URI, projection,
@@ -127,7 +131,12 @@ class CalendarService(private val context: Context) {
                 System.out.println("Calendar name = $calName Calendar ID = $calID")
 
                 calCursor.close()
-                return calID.toLong()
+
+                val calendar = CalendarDTO()
+                calendar.calId = calID.toLong()
+                calendar.calAccount = calName
+
+                return calendar
             }
         }
         return null
