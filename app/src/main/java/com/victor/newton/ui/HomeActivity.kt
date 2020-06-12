@@ -29,6 +29,7 @@ import com.victor.newton.helpers.ViewsHelper
 import com.victor.newton.services.CalendarService
 import com.victor.newton.services.PreferencesService
 import com.victor.newton.services.WeatherService
+import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.dialog_event.view.*
 import java.lang.Exception
 import java.time.*
@@ -238,10 +239,21 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             || lowerText == "what is the default location" || lowerText == "what's the default location"){
 
             val city = PreferencesService(this).getPreference("city")
-            city?.let { viewDefaultLocation(it) }
+            city?.let { viewDefaultLocation(it, true) }
 
-            reprodueixSo("Your default location is $city")
+            var missatge :String
+            missatge = "Your primary default location is $city"
             viewMessage("Query successful: default location",true)
+
+            val city2 = PreferencesService(this).getPreference("city2")
+
+            if(city2!!.isNotBlank()){
+                viewDefaultLocation(city2, false)
+                missatge += ". Your secondary default location is $city2"
+            }
+
+            reprodueixSo(missatge)
+
         }
         //Set default location to...
         else if(lowerText.startsWith("set default location to")){
@@ -258,7 +270,7 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             }
 
             val city = PreferencesService(this).getPreference("city")
-            city?.let { viewDefaultLocation(it) }
+            city?.let { viewDefaultLocation(it, true) }
 
             viewMessage("Change completed successfully",true)
             reprodueixSo("Change completed successfully, Your default location now is $city")
@@ -317,6 +329,14 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             PreferencesService(this).getPreference("city")?.let { WeatherService(this)
                 .getCurrentWeatherByLocation(null, null,it,findViewById(R.id.weather),false, calendar = false) }
 
+            val city2 = PreferencesService(this).getPreference("city2")
+
+            if(city2!!.isNotBlank()){
+                WeatherService(this)
+                    .getCurrentWeatherByLocation(null, null,city2,
+                        findViewById(R.id.weather2),false, calendar = false)
+            }
+
             viewMessage("Query successful: weather",true)
         }
         //What is the weather in...?
@@ -350,6 +370,13 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
             PreferencesService(this).getPreference("city")?.let { WeatherService(this)
                 .getForecastWeatherByLocation(null, null,it,findViewById(R.id.weather),true) }
 
+            val city2 = PreferencesService(this).getPreference("city2")
+
+            if(city2!!.isNotBlank()){
+                WeatherService(this)
+                    .getForecastWeatherByLocation(null, null,city2,findViewById(R.id.weather2),true)
+            }
+
             viewMessage("Query successful: weather for tomorrow",true)
         }
         //What is the weather forecast?
@@ -357,6 +384,13 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
 
             PreferencesService(this).getPreference("city")?.let { WeatherService(this)
                 .getForecastWeatherByLocation(null,null, it,findViewById(R.id.weatherForecast),false) }
+
+            val city2 = PreferencesService(this).getPreference("city2")
+
+            if(city2!!.isNotBlank()){
+                WeatherService(this)
+                    .getForecastWeatherByLocation(null, null,city2,findViewById(R.id.weatherForecast2),false)
+            }
 
             viewMessage("Query successful: weather forecast",true)
         }
@@ -405,24 +439,38 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
     fun amagaVistes(){
         val messageTest: View = findViewById(R.id.message2)
         val defaultLocationView: View = findViewById(R.id.defaultLocation)
+        val defaultLocationView2: View = findViewById(R.id.defaultLocatio2)
         val locationView: View = findViewById(R.id.currentLocation)
         val weatherView: View = findViewById(R.id.weather)
+        val weatherView2: View = findViewById(R.id.weather2)
         val weatherForecastView: View = findViewById(R.id.weatherForecast)
+        val weatherForecastView2: View = findViewById(R.id.weatherForecast2)
         val eventsView: View = findViewById(R.id.events)
 
         messageTest.visibility = View.GONE
         defaultLocationView.visibility = View.GONE
+        defaultLocationView2.visibility = View.GONE
         locationView.visibility = View.GONE
         weatherView.visibility = View.GONE
+        weatherView2.visibility = View.GONE
         weatherForecastView.visibility = View.GONE
+        weatherForecastView2.visibility = View.GONE
         eventsView.visibility = View.GONE
     }
 
     fun mostraInfoInicial(){
         val city = PreferencesService(this).getPreference("city")
-        city?.let { viewDefaultLocation(it) }
+        city?.let { viewDefaultLocation(it, true) }
         city?.let { WeatherService(this).getCurrentWeatherByLocation(null, null,it,
             findViewById(R.id.weather),true, calendar = false)}
+
+        val city2 = PreferencesService(this).getPreference("city2")
+
+        if(city2!!.isNotBlank()){
+            viewDefaultLocation(city2, false)
+            WeatherService(this).getCurrentWeatherByLocation(null, null,city2,
+                findViewById(R.id.weather2),true, calendar = false)
+        }
 
         mostraCalendari(true, false)
     }
@@ -441,13 +489,25 @@ class HomeActivity : AppCompatActivity(),TextToSpeech.OnInitListener {
         ViewsHelper(this).hideView(messageTest)
     }
 
-    fun viewDefaultLocation(city: String){
-        val defaultLocationView: View = findViewById(R.id.defaultLocation)
+    fun viewDefaultLocation(city: String, primary: Boolean){
+
+        val defaultLocationView: View = if(primary){
+            findViewById(R.id.defaultLocation)
+        } else {
+            findViewById(R.id.defaultLocatio2)
+        }
+
         val locationText: TextView = defaultLocationView.findViewById(R.id.textMissatge)
         val imatge: ImageView = defaultLocationView.findViewById(R.id.icon)
 
         imatge.setImageResource(R.drawable.location)
-        locationText.text = "${city.capitalize()}${System.getProperty ("line.separator")}(Default location)"
+
+        var missatge: String = "${city.capitalize()}${System.getProperty ("line.separator")}"
+
+        missatge += if(primary) "(primary default city)"
+        else "(secondary default city)"
+
+        locationText.text = missatge
 
         ViewsHelper(this).showView(defaultLocationView)
     }

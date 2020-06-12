@@ -28,10 +28,19 @@
             <include android:id="@+id/defaultLocation"
                 layout="@layout/card_view_message" />
 
+            <include android:id="@+id/defaultLocatio2"
+                layout="@layout/card_view_message" />
+
             <include android:id="@+id/weather"
                 layout="@layout/card_view_weather_one_day" />
 
+            <include android:id="@+id/weather2"
+                layout="@layout/card_view_weather_one_day" />
+
             <include android:id="@+id/weatherForecast"
+                layout="@layout/card_view_weather_three_days" />
+
+            <include android:id="@+id/weatherForecast2"
                 layout="@layout/card_view_weather_three_days" />
 
             <include android:id="@+id/events"
