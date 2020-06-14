@@ -118,8 +118,8 @@ class CalendarService(private val context: Context) {
         }
 
         if (calCursor != null) {
-//            calCursor.moveToFirst()
-            if (calCursor.moveToLast()) {
+//            calCursor.moveToFirst(), calCursor.moveToLast()
+            if (calCursor.moveToFirst()) {
                 val calName: String
                 val calID: String
                 val nameCol = calCursor.getColumnIndex(projection[1])
@@ -128,7 +128,7 @@ class CalendarService(private val context: Context) {
                 calName = calCursor.getString(nameCol)
                 calID = calCursor.getString(idCol)
 
-                System.out.println("Calendar name = $calName Calendar ID = $calID")
+                println("Calendar name = $calName Calendar ID = $calID")
 
                 calCursor.close()
 
