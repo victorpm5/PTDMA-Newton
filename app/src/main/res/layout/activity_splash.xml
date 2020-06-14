@@ -13,7 +13,7 @@
         android:layout_width="250dp"
         android:layout_height="250dp"
         android:contentDescription="@string/logo"
-        android:src="@drawable/ic_mic_black_24dp"
+        android:src="@drawable/foreground"
         app:layout_constraintBottom_toBottomOf="@+id/developedBy"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
